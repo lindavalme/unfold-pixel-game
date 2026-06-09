@@ -51,14 +51,11 @@ export default class WorldScene extends Phaser.Scene {
 
     console.log('[WorldScene] Tileset names found in map data:', map.tilesets.map(ts => ts.name));
 
-    // Log Generic_Home dimensions — its height (428px) is not a multiple of 32 (428 % 32 = 12
-    // trailing px of padding after 13 complete rows). Phaser rounds correctly to 13 rows so the
-    // warning is harmless, but we record the exact dimensions here for auditing.
     const genericHomeSrc = this.textures.get('Generic_Home_1_Layer_1_32x32').getSourceImage();
     console.log(
       `[WorldScene] Generic_Home_1_Layer_1_32x32.png: ${genericHomeSrc.width}x${genericHomeSrc.height}px` +
       ` — width % 32 = ${genericHomeSrc.width % 32}, height % 32 = ${genericHomeSrc.height % 32}` +
-      ` (${Math.floor(genericHomeSrc.height / 32)} complete rows, ${genericHomeSrc.height % 32}px trailing gap)`
+      ` (${Math.floor(genericHomeSrc.height / 32)} complete rows)`
     );
 
     // Add tilesets and inject external tile property data before any layer is created.
@@ -114,17 +111,39 @@ export default class WorldScene extends Phaser.Scene {
     const playerX = 10 * map.tileWidth + map.tileWidth / 2;
     const playerY = 7 * map.tileHeight + map.tileHeight / 2;
 
-    const player = this.physics.add.sprite(playerX, playerY, 'player');
-    player.setDepth(6);
+    this.anims.create({
+      key: 'walk-down',
+      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: 'idle-down',
+      frames: [{ key: 'player', frame: 0 }],
+      frameRate: 1,
+      repeat: -1,
+    });
+
+    const player = this.physics.add.sprite(playerX, playerY, 'player', 0);
+    player.setOrigin(0.5, 0.5);
+    player.setDepth(8);
     player.setScale(1);
+    player.body.setSize(16, 8).setOffset(8, 24);
     player.body.setCollideWorldBounds(true);
 
     console.log(
       `[WorldScene] Player — world (${player.x}, ${player.y}),` +
+      ` origin (${player.originX}, ${player.originY}),` +
       ` frame ${player.frame.name},` +
       ` displaySize ${player.displayWidth}x${player.displayHeight}px,` +
       ` depth ${player.depth}`
     );
+
+    const tex = this.textures.get('player');
+    console.log('[WorldScene] player frameTotal:', tex.frameTotal);
+    console.log('[WorldScene] player frame 0 size:', tex.frames[0]?.realWidth, 'x', tex.frames[0]?.realHeight);
+    console.log('[WorldScene] player visible:', player.visible, '| alpha:', player.alpha);
 
     // Physics world bounds match map pixel dimensions
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
