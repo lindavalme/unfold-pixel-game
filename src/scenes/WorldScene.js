@@ -42,7 +42,7 @@ export default class WorldScene extends Phaser.Scene {
 
     this.load.spritesheet('player', 'assets/characters/player.png', {
       frameWidth: 32,
-      frameHeight: 32,
+      frameHeight: 64, // each character is 2 tile-rows tall (32×64px)
     });
   }
 
@@ -111,42 +111,89 @@ export default class WorldScene extends Phaser.Scene {
     const playerX = 10 * map.tileWidth + map.tileWidth / 2;
     const playerY = 7 * map.tileHeight + map.tileHeight / 2;
 
-    this.anims.create({
-      key: 'walk-down',
-      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 2 }),
-      frameRate: 8,
-      repeat: -1,
-    });
+    // LimeZu sheet: 1792×1312px, frameWidth=32, frameHeight=64 → 56 cols × 20 rows.
+    // Each character sprite is 32×64px (spans 2 tile-rows in 32px grid).
+    // With frameHeight=64, Phaser slices into 56×20=1120 frames and the
+    // official LimeZu row numbering maps directly:
+    //
+    //   Row 0 (frames   0– 55): 4 reference poses — cols 0–3  (right, up, left, down)
+    //   Row 1 (frames  56–111): idle  — 6 frames × 4 directions, cols 0–23
+    //   Row 2 (frames 112–167): walk  — 6 frames × 4 directions, cols 0–23
+    //
+    // Direction index within each row: right=0, up=1, left=2, down=3
+    // Frame = rowStart + dirIndex*6 + frameWithinCycle (0–5)
 
-    this.anims.create({
-      key: 'idle-down',
-      frames: [{ key: 'player', frame: 0 }],
-      frameRate: 1,
-      repeat: -1,
-    });
+    const FRAME_RANGES = {
+      'idle-right': [56, 57, 58, 59, 60, 61],
+      'idle-up':    [62, 63, 64, 65, 66, 67],
+      'idle-left':  [68, 69, 70, 71, 72, 73],
+      'idle-down':  [74, 75, 76, 77, 78, 79],  // row 1, cols 18–23
+      'walk-right': [112, 113, 114, 115, 116, 117],
+      'walk-up':    [118, 119, 120, 121, 122, 123],
+      'walk-left':  [124, 125, 126, 127, 128, 129],
+      'walk-down':  [130, 131, 132, 133, 134, 135], // row 2, cols 18–23
+    };
 
-    const player = this.physics.add.sprite(playerX, playerY, 'player', 0);
+    // --- Spritesheet diagnostic ---
+    const playerTex = this.textures.get('player');
+    const playerSrc = playerTex.getSourceImage();
+    console.log(`[WorldScene] Player spritesheet: ${playerSrc.width}x${playerSrc.height}px → ${playerSrc.width/32} cols × ${playerSrc.height/64} rows (frameHeight=64)`);
+    console.log(`[WorldScene] Texture frame count: ${playerTex.frameTotal}  (expected: 1120)`);
+    console.log(`[WorldScene] Frame 74 exists: ${playerTex.has('74') || playerTex.has(74)}`);
+    for (const [key, frames] of Object.entries(FRAME_RANGES)) {
+      console.log(`  ${key}: frames ${frames[0]}–${frames[frames.length - 1]}`);
+    }
+
+    for (const [key, frames] of Object.entries(FRAME_RANGES)) {
+      this.anims.create({
+        key,
+        frames: frames.map(f => ({ key: 'player', frame: f })),
+        frameRate: key.startsWith('walk') ? 8 : 4,
+        repeat: -1,
+      });
+    }
+
+    const IDLE_DOWN_START = 74; // row 1, col 18 — first frame of idle-down (LimeZu confirmed)
+    console.log(`[WorldScene] Setting idle frame to idle-down: ${IDLE_DOWN_START}`);
+
+    const player = this.physics.add.sprite(playerX, playerY, 'player', IDLE_DOWN_START);
     player.setOrigin(0.5, 0.5);
     player.setDepth(8);
     player.setScale(1);
-    player.body.setSize(16, 8).setOffset(8, 24);
+    // Sprite is 32×64px. With origin(0.5,0.5), feet sit at +32px below centre.
+    // Physics body is a slim foot-area box: 16×8px, offset so it sits at the feet.
+    // offsetX = (32-16)/2 = 8;  offsetY = (64-8)/2 = 28 (centre of 64 + 24 = bottom quarter)
+    player.body.setSize(16, 8).setOffset(8, 52);
     player.body.setCollideWorldBounds(true);
+    player.play('idle-down');
 
-    console.log(
-      `[WorldScene] Player — world (${player.x}, ${player.y}),` +
-      ` origin (${player.originX}, ${player.originY}),` +
-      ` frame ${player.frame.name},` +
-      ` displaySize ${player.displayWidth}x${player.displayHeight}px,` +
-      ` depth ${player.depth}`
+    // --- Player diagnostic ---
+    console.log('[WorldScene] ── Player diagnostics ──────────────────────');
+    console.log(`  world position : (${player.x}, ${player.y})`);
+    console.log(`  origin         : (${player.originX}, ${player.originY})`);
+    console.log(`  depth          : ${player.depth}  (Decor_High=5, Walls_Above=7, player=8)`);
+    console.log(`  visible        : ${player.visible},  alpha: ${player.alpha}`);
+    console.log(`  active frame   : ${player.frame.name}  (expected: 74)`);
+    console.log(`  displaySize    : ${player.displayWidth}x${player.displayHeight}px  (expected: 32x64)`);
+    const _ptex = this.textures.get('player');
+    console.log(`  frame in tex   : has('74')=${_ptex.has('74')}, has(74)=${_ptex.has(74)}, frameTotal=${_ptex.frameTotal}`);
+    console.log('[WorldScene] ── Camera diagnostics ─────────────────────');
+    console.log(`  scroll         : (${this.cameras.main.scrollX.toFixed(1)}, ${this.cameras.main.scrollY.toFixed(1)})`);
+    console.log(`  midPoint       : (${this.cameras.main.midPoint.x.toFixed(1)}, ${this.cameras.main.midPoint.y.toFixed(1)})`);
+    console.log(`  followTarget   : player at (${player.x}, ${player.y})`);
+    console.log('[WorldScene] ────────────────────────────────────────────');
+
+    // Inset the top bound by the body's Y offset so the sprite's visual top (which
+    // sits offsetY pixels above the body) can never extend above y=0 when clamped.
+    // Sprite is 32×64, origin (0.5, 0.5): sprite top = player.y - 32.
+    // Body offset Y = 52 → body top = player.y - 32 + 52 = player.y + 20.
+    // Inset the world top bound so the sprite head never clips above y=0:
+    // minimum player.y = 32 (so sprite top = 0), giving world inset = 32.
+    const bodyOffsetY = 52; // matches player.body.setOffset(_, 52)
+    this.physics.world.setBounds(
+      0, 32,
+      map.widthInPixels, map.heightInPixels - 32
     );
-
-    const tex = this.textures.get('player');
-    console.log('[WorldScene] player frameTotal:', tex.frameTotal);
-    console.log('[WorldScene] player frame 0 size:', tex.frames[0]?.realWidth, 'x', tex.frames[0]?.realHeight);
-    console.log('[WorldScene] player visible:', player.visible, '| alpha:', player.alpha);
-
-    // Physics world bounds match map pixel dimensions
-    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
     // Camera follows player, bounded to map; roundPixels keeps pixel art crisp
     this.cameras.main
