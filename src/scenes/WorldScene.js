@@ -156,31 +156,42 @@ export default class WorldScene extends Phaser.Scene {
     const IDLE_DOWN_START = 74; // row 1, col 18 — first frame of idle-down (LimeZu confirmed)
     console.log(`[WorldScene] Setting idle frame to idle-down: ${IDLE_DOWN_START}`);
 
-    const player = this.physics.add.sprite(playerX, playerY, 'player', IDLE_DOWN_START);
-    player.setOrigin(0.5, 0.5);
-    player.setDepth(8);
-    player.setScale(1);
+    this.player = this.physics.add.sprite(playerX, playerY, 'player', IDLE_DOWN_START);
+    this.player.setOrigin(0.5, 0.5);
+    this.player.setDepth(8);
+    this.player.setScale(1);
     // Sprite is 32×64px. With origin(0.5,0.5), feet sit at +32px below centre.
     // Physics body is a slim foot-area box: 16×8px, offset so it sits at the feet.
     // offsetX = (32-16)/2 = 8;  offsetY = (64-8)/2 = 28 (centre of 64 + 24 = bottom quarter)
-    player.body.setSize(16, 8).setOffset(8, 52);
-    player.body.setCollideWorldBounds(true);
-    player.play('idle-down');
+    this.player.body.setSize(16, 8).setOffset(8, 52);
+    this.player.body.setCollideWorldBounds(true);
+    this.player.play('idle-down');
+
+    this.cursors = this.input.keyboard.addKeys({
+      up:    Phaser.Input.Keyboard.KeyCodes.UP,
+      down:  Phaser.Input.Keyboard.KeyCodes.DOWN,
+      left:  Phaser.Input.Keyboard.KeyCodes.LEFT,
+      right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      w:     Phaser.Input.Keyboard.KeyCodes.W,
+      s:     Phaser.Input.Keyboard.KeyCodes.S,
+      a:     Phaser.Input.Keyboard.KeyCodes.A,
+      d:     Phaser.Input.Keyboard.KeyCodes.D,
+    });
 
     // --- Player diagnostic ---
     console.log('[WorldScene] ── Player diagnostics ──────────────────────');
-    console.log(`  world position : (${player.x}, ${player.y})`);
-    console.log(`  origin         : (${player.originX}, ${player.originY})`);
-    console.log(`  depth          : ${player.depth}  (Decor_High=5, Walls_Above=7, player=8)`);
-    console.log(`  visible        : ${player.visible},  alpha: ${player.alpha}`);
-    console.log(`  active frame   : ${player.frame.name}  (expected: 74)`);
-    console.log(`  displaySize    : ${player.displayWidth}x${player.displayHeight}px  (expected: 32x64)`);
+    console.log(`  world position : (${this.player.x}, ${this.player.y})`);
+    console.log(`  origin         : (${this.player.originX}, ${this.player.originY})`);
+    console.log(`  depth          : ${this.player.depth}  (Decor_High=5, Walls_Above=7, player=8)`);
+    console.log(`  visible        : ${this.player.visible},  alpha: ${this.player.alpha}`);
+    console.log(`  active frame   : ${this.player.frame.name}  (expected: 74)`);
+    console.log(`  displaySize    : ${this.player.displayWidth}x${this.player.displayHeight}px  (expected: 32x64)`);
     const _ptex = this.textures.get('player');
     console.log(`  frame in tex   : has('74')=${_ptex.has('74')}, has(74)=${_ptex.has(74)}, frameTotal=${_ptex.frameTotal}`);
     console.log('[WorldScene] ── Camera diagnostics ─────────────────────');
     console.log(`  scroll         : (${this.cameras.main.scrollX.toFixed(1)}, ${this.cameras.main.scrollY.toFixed(1)})`);
     console.log(`  midPoint       : (${this.cameras.main.midPoint.x.toFixed(1)}, ${this.cameras.main.midPoint.y.toFixed(1)})`);
-    console.log(`  followTarget   : player at (${player.x}, ${player.y})`);
+    console.log(`  followTarget   : player at (${this.player.x}, ${this.player.y})`);
     console.log('[WorldScene] ────────────────────────────────────────────');
 
     // Inset the top bound by the body's Y offset so the sprite's visual top (which
@@ -189,15 +200,58 @@ export default class WorldScene extends Phaser.Scene {
     // Body offset Y = 52 → body top = player.y - 32 + 52 = player.y + 20.
     // Inset the world top bound so the sprite head never clips above y=0:
     // minimum player.y = 32 (so sprite top = 0), giving world inset = 32.
-    const bodyOffsetY = 52; // matches player.body.setOffset(_, 52)
     this.physics.world.setBounds(
       0, 32,
       map.widthInPixels, map.heightInPixels - 32
     );
 
+    if (collisionLayer) {
+      this.physics.add.collider(this.player, collisionLayer);
+    }
+
     // Camera follows player, bounded to map; roundPixels keeps pixel art crisp
     this.cameras.main
       .setBounds(0, 0, map.widthInPixels, map.heightInPixels)
-      .startFollow(player, true, 1, 1);
+      .startFollow(this.player, true, 1, 1);
+  }
+
+  update() {
+    const { up, down, left, right, w, s, a, d } = this.cursors;
+    const SPEED = 120;
+
+    const goUp    = up.isDown    || w.isDown;
+    const goDown  = down.isDown  || s.isDown;
+    const goLeft  = left.isDown  || a.isDown;
+    const goRight = right.isDown || d.isDown;
+
+    let vx = 0;
+    let vy = 0;
+    if (goLeft)  vx -= SPEED;
+    if (goRight) vx += SPEED;
+    if (goUp)    vy -= SPEED;
+    if (goDown)  vy += SPEED;
+
+    // Normalize diagonal so speed stays constant in all directions
+    if (vx !== 0 && vy !== 0) {
+      vx /= Math.SQRT2;
+      vy /= Math.SQRT2;
+    }
+
+    this.player.body.setVelocity(vx, vy);
+
+    const moving = vx !== 0 || vy !== 0;
+    let dir = this._lastDir || 'down';
+
+    if (goLeft)       dir = 'left';
+    else if (goRight) dir = 'right';
+    else if (goUp)    dir = 'up';
+    else if (goDown)  dir = 'down';
+
+    const animKey = `${moving ? 'walk' : 'idle'}-${dir}`;
+    if (this.player.anims.currentAnim?.key !== animKey) {
+      this.player.play(animKey);
+    }
+
+    this._lastDir = dir;
   }
 }
