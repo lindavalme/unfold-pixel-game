@@ -1,5 +1,5 @@
 { "columns":76,
- "image":"assets\/LimeZu_modern-interiors\/1_Interiors\/32x32\/Room_Builder_32x32.png",
+ "image":"../tilesets/Room_Builder_32x32.png",
  "imageheight":3616,
  "imagewidth":2432,
  "margin":0,
