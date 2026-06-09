@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="20" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="1">
  <tileset firstgid="1" name="Generic_Home_1_Layer_1_32x32" tilewidth="32" tileheight="32" tilecount="182" columns="14">
-  <image source="../../../../../Documents/#drive/unfold-pixel-game/assets/LimeZu_modern-interiors/6_Home_Designs/Generic_Home_Designs/32x32/Generic_Home_1_Layer_1_32x32.png" width="448" height="428"/>
+  <image source="../tilesets/Generic_Home_1_Layer_1_32x32.png" width="448" height="428"/>
   <tile id="0">
    <properties>
     <property name="collides" type="bool" value="true"/>
@@ -449,7 +449,7 @@
   </tile>
  </tileset>
  <tileset firstgid="183" name="Room_Builder_32x32" tilewidth="32" tileheight="32" tilecount="8588" columns="76">
-  <image source="../../../../../Documents/#drive/unfold-pixel-game/assets/LimeZu_modern-interiors/1_Interiors/32x32/Room_Builder_32x32.png" width="2432" height="3616"/>
+  <image source="../tilesets/Room_Builder_32x32.png" width="2432" height="3616"/>
   <tile id="3396">
    <properties>
     <property name="collides" type="bool" value="true"/>
@@ -7872,10 +7872,10 @@
   </tile>
  </tileset>
  <tileset firstgid="8771" name="1_Generic_32x32" tilewidth="32" tileheight="32" tilecount="1248" columns="16">
-  <image source="../../../../../Documents/#drive/unfold-pixel-game/assets/LimeZu_modern-interiors/1_Interiors/32x32/Theme_Sorter_32x32/1_Generic_32x32.png" width="512" height="2496"/>
+  <image source="../tilesets/1_Generic_32x32.png" width="512" height="2496"/>
  </tileset>
  <tileset firstgid="10019" name="12_Kitchen_32x32" tilewidth="32" tileheight="32" tilecount="784" columns="16">
-  <image source="../../../../../Documents/#drive/unfold-pixel-game/assets/LimeZu_modern-interiors/1_Interiors/32x32/Theme_Sorter_32x32/12_Kitchen_32x32.png" width="512" height="1568"/>
+  <image source="../tilesets/12_Kitchen_32x32.png" width="512" height="1568"/>
  </tileset>
  <layer id="1" name="Floor" width="20" height="15">
   <data encoding="csv">
