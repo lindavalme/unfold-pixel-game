@@ -1,0 +1,14 @@
+{ "columns":16,
+ "image":"assets\/LimeZu_modern-interiors\/1_Interiors\/32x32\/Theme_Sorter_32x32\/12_Kitchen_32x32.png",
+ "imageheight":1568,
+ "imagewidth":512,
+ "margin":0,
+ "name":"12_Kitchen_32x32",
+ "spacing":0,
+ "tilecount":784,
+ "tiledversion":"1.12.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}

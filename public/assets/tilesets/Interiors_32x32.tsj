@@ -1,0 +1,14 @@
+{ "columns":16,
+ "image":"assets\/LimeZu_modern-interiors\/1_Interiors\/32x32\/Interiors_32x32.png",
+ "imageheight":34048,
+ "imagewidth":512,
+ "margin":0,
+ "name":"Interiors_32x32",
+ "spacing":0,
+ "tilecount":17024,
+ "tiledversion":"1.12.2",
+ "tileheight":32,
+ "tilewidth":32,
+ "type":"tileset",
+ "version":"1.10"
+}

@@ -1,0 +1,17 @@
+{
+  "name": "unfold-pixel-game",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "easystarjs": "^0.4.4",
+    "phaser": "^3.88.2"
+  },
+  "devDependencies": {
+    "vite": "^5.4.19"
+  }
+}
