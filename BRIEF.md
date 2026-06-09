@@ -525,7 +525,6 @@ Full-screen canvas on all platforms — no fixed UI chrome.
 - (ALT) Tileset: Penzilla [Top Down Retro Interior](https://penzilla.itch.io/top-down-retro-interior) (16×16)
 - (ALT) Characters: shubibubi [Cozy People](https://shubibubi.itch.io/cozy-people) (32×32)
 - (ALT) Food props: Ghostpixxells [Pixel Food](https://ghostpixxells.itch.io/pixelfood) (32×32)
-- ⚠️ Confirm all licenses before public launch
 
 ---
 
