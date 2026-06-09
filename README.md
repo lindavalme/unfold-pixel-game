@@ -1,6 +1,6 @@
 # Unfold
 
-A pixel-art gifting game. A Creator designs a personalized interactive home — placing objects, NPCs, and mini-games that tell the story of a relationship — then hands it to a Recipient as a physical QR-code card. The Recipient scans it, steps inside, and plays through a layered experience that reveals messages and unlocks.
+A pixel-art gifting game. A Creator designs a personalized interactive home — placing objects, NPCs, and mini-games that tell the story of a relationship — then hands it to a Recipient as a physical QR-code card. The Recipient scans it, steps inside, and plays through a layered experience that reveals messages, unlocks rooms, and ends with something they'll want to keep.
 
 > For the full product spec, see [BRIEF.md](BRIEF.md).
 
