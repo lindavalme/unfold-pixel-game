@@ -9,6 +9,10 @@ new Phaser.Game({
   antialias: false,
   backgroundColor: '#2d2d2d',
   parent: 'game-container',
+  physics: {
+    default: 'arcade',
+    arcade: { debug: false },
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
