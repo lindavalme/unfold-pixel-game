@@ -213,6 +213,86 @@ export default class WorldScene extends Phaser.Scene {
     this.cameras.main
       .setBounds(0, 0, map.widthInPixels, map.heightInPixels)
       .startFollow(this.player, true, 1, 1);
+
+    this._joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
+    if (this.sys.game.device.input.touch) {
+      this._createJoystick();
+    }
+  }
+
+  _createJoystick() {
+    const RADIUS   = 48;
+    const THUMB_R  = 24;
+    const MARGIN   = 80; // distance from bottom-left corner
+
+    const cam = this.cameras.main;
+    const baseX = MARGIN;
+    const baseY = this.scale.height - MARGIN;
+
+    const gfx = this.add.graphics().setDepth(100).setScrollFactor(0);
+    const thumb = this.add.graphics().setDepth(101).setScrollFactor(0);
+
+    const drawBase = () => {
+      gfx.clear();
+      gfx.fillStyle(0x000000, 0.25);
+      gfx.fillCircle(baseX, baseY, RADIUS);
+      gfx.lineStyle(2, 0xffffff, 0.5);
+      gfx.strokeCircle(baseX, baseY, RADIUS);
+    };
+
+    const drawThumb = (tx, ty) => {
+      thumb.clear();
+      thumb.fillStyle(0xffffff, 0.5);
+      thumb.fillCircle(tx, ty, THUMB_R);
+    };
+
+    drawBase();
+    drawThumb(baseX, baseY);
+
+    this.input.on('pointerdown', (ptr) => {
+      // Only claim touches that start in the left third of the screen
+      if (ptr.x > this.scale.width / 3) return;
+      this._joystick.active = true;
+      this._joystick.baseX  = ptr.x;
+      this._joystick.baseY  = ptr.y;
+
+      // Reposition base graphic to touch origin
+      gfx.clear();
+      gfx.fillStyle(0x000000, 0.25);
+      gfx.fillCircle(ptr.x, ptr.y, RADIUS);
+      gfx.lineStyle(2, 0xffffff, 0.5);
+      gfx.strokeCircle(ptr.x, ptr.y, RADIUS);
+      drawThumb(ptr.x, ptr.y);
+    });
+
+    this.input.on('pointermove', (ptr) => {
+      if (!this._joystick.active) return;
+      const dx = ptr.x - this._joystick.baseX;
+      const dy = ptr.y - this._joystick.baseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const clamped = Math.min(dist, RADIUS);
+      const angle = Math.atan2(dy, dx);
+      const tx = this._joystick.baseX + Math.cos(angle) * clamped;
+      const ty = this._joystick.baseY + Math.sin(angle) * clamped;
+
+      // Normalise to [-1, 1]; dead-zone at 15% of radius
+      const norm = dist > RADIUS * 0.15 ? Math.min(dist / RADIUS, 1) : 0;
+      this._joystick.dx = norm * Math.cos(angle);
+      this._joystick.dy = norm * Math.sin(angle);
+
+      drawThumb(tx, ty);
+    });
+
+    const release = () => {
+      this._joystick.active = false;
+      this._joystick.dx = 0;
+      this._joystick.dy = 0;
+      drawBase();
+      drawThumb(baseX, baseY);
+    };
+
+    this.input.on('pointerup',     release);
+    this.input.on('pointercancel', release);
   }
 
   update() {
@@ -231,10 +311,16 @@ export default class WorldScene extends Phaser.Scene {
     if (goUp)    vy -= SPEED;
     if (goDown)  vy += SPEED;
 
+    // Merge joystick input (takes over when no keyboard input)
+    if (vx === 0 && vy === 0 && this._joystick?.active) {
+      vx = this._joystick.dx * SPEED;
+      vy = this._joystick.dy * SPEED;
+    }
+
     // Normalize diagonal so speed stays constant in all directions
     if (vx !== 0 && vy !== 0) {
-      vx /= Math.SQRT2;
-      vy /= Math.SQRT2;
+      const len = Math.sqrt(vx * vx + vy * vy);
+      if (len > SPEED) { vx = (vx / len) * SPEED; vy = (vy / len) * SPEED; }
     }
 
     this.player.body.setVelocity(vx, vy);
@@ -242,10 +328,14 @@ export default class WorldScene extends Phaser.Scene {
     const moving = vx !== 0 || vy !== 0;
     let dir = this._lastDir || 'down';
 
-    if (goLeft)       dir = 'left';
-    else if (goRight) dir = 'right';
-    else if (goUp)    dir = 'up';
-    else if (goDown)  dir = 'down';
+    if      (vx < -10)  dir = 'left';
+    else if (vx >  10)  dir = 'right';
+    else if (vy < -10)  dir = 'up';
+    else if (vy >  10)  dir = 'down';
+    else if (goLeft)    dir = 'left';
+    else if (goRight)   dir = 'right';
+    else if (goUp)      dir = 'up';
+    else if (goDown)    dir = 'down';
 
     const animKey = `${moving ? 'walk' : 'idle'}-${dir}`;
     if (this.player.anims.currentAnim?.key !== animKey) {
