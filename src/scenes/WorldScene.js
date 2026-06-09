@@ -101,7 +101,7 @@ export default class WorldScene extends Phaser.Scene {
     const collisionLayer = map.createLayer('Collision', tilesets, 0, 0);
     if (collisionLayer) {
       collisionLayer.setVisible(false);
-      collisionLayer.setCollisionByProperty({ collides: true });
+      collisionLayer.setCollisionBetween(1, 9999);
     } else {
       console.warn('[WorldScene] Collision layer not found in map');
     }
