@@ -198,30 +198,43 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   _buildHPPanel(x, y, w, name) {
+    const PAD_X   = 10;
+    const PAD_Y   = 8;
+    const LABEL_W = 32; // width reserved for "HP" label
+    const BAR_H   = 10;
+    const panelH  = PAD_Y + 20 + 6 + BAR_H + PAD_Y; // name row + gap + bar + padding
+
     const gfx = this.add.graphics().setDepth(4);
     gfx.fillStyle(0x0d0d1a, 0.9);
-    gfx.fillRect(x, y, w, 46);
+    gfx.fillRect(x, y, w, panelH);
     gfx.lineStyle(2, WARM, 0.6);
-    gfx.strokeRect(x, y, w, 46);
+    gfx.strokeRect(x, y, w, panelH);
 
-    this.add.text(x + 8, y + 7, name, {
+    // Name row
+    this.add.text(x + PAD_X, y + PAD_Y, name, {
       fontFamily: PS2P, fontSize: '15px', color: WARM_S, resolution: 2,
     }).setDepth(5);
 
-    this.add.text(x + 8, y + 26, 'HP', {
+    // HP label + bar row
+    const barRowY  = y + PAD_Y + 20 + 6;
+    this.add.text(x + PAD_X, barRowY - 1, 'HP', {
       fontFamily: PS2P, fontSize: '15px', color: DIM, resolution: 2,
     }).setDepth(5);
 
-    const trackX = x + 28, trackY = y + 28, trackW = w - 38, trackH = 8;
+    // Bar fills remaining width after "HP" label
+    const trackX = x + PAD_X + LABEL_W + 6;
+    const trackW = w - (PAD_X + LABEL_W + 6) - PAD_X;
+    const trackY = barRowY;
+
     gfx.fillStyle(0x111122, 1);
-    gfx.fillRect(trackX, trackY, trackW, trackH);
+    gfx.fillRect(trackX, trackY, trackW, BAR_H);
 
     const fill = this.add.graphics().setDepth(5);
     fill.fillStyle(HP_GREEN, 1);
-    fill.fillRect(0, 0, trackW, trackH);
+    fill.fillRect(0, 0, trackW, BAR_H);
     fill.setPosition(trackX, trackY);
 
-    return { fill, trackW, trackH, currentRatio: 1 };
+    return { fill, trackW, trackH: BAR_H, currentRatio: 1 };
   }
 
   _drainHP(bar, amount, onDone) {
