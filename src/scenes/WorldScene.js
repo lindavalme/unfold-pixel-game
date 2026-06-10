@@ -227,6 +227,8 @@ export default class WorldScene extends Phaser.Scene {
     this.events.on('proximityEnter', (entity) => this.dialogBox.show(entity));
     this.events.on('proximityLeave', ()       => this.dialogBox.hide());
 
+    this._drawEntityMarkers();
+
     if (DEBUG_PROXIMITY) {
       this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);
     }
@@ -234,6 +236,27 @@ export default class WorldScene extends Phaser.Scene {
     this._joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
     if (this.sys.game.device.input.touch) {
       this._createJoystick();
+    }
+  }
+
+  _drawEntityMarkers() {
+    const TYPE_COLOR = { npc: 0x44ccff, object: 0xff9944, sign: 0x88ff88 };
+
+    for (const entity of this.interactionSystem.entities) {
+      const color = TYPE_COLOR[entity.type] ?? 0xffffff;
+
+      const gfx = this.add.graphics().setDepth(49);
+      gfx.lineStyle(2, color, 0.9);
+      gfx.strokeCircle(entity.x, entity.y, 12);
+      gfx.fillStyle(color, 0.3);
+      gfx.fillCircle(entity.x, entity.y, 12);
+
+      this.add.text(entity.x, entity.y - 20, entity.name, {
+        fontFamily: '"Press Start 2P"',
+        fontSize: '6px',
+        color: '#' + color.toString(16).padStart(6, '0'),
+        resolution: 2,
+      }).setOrigin(0.5, 1).setDepth(49);
     }
   }
 
