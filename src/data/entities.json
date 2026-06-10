@@ -1,0 +1,29 @@
+[
+  {
+    "id": "sign_welcome",
+    "name": "Welcome Sign",
+    "type": "sign",
+    "x": 400,
+    "y": 208,
+    "message": "Welcome home! This is your space."
+  },
+  {
+    "id": "npc_grandma",
+    "name": "Grandma",
+    "type": "npc",
+    "x": 272,
+    "y": 256,
+    "portrait": null,
+    "dialog": "Hello, dear! I've been waiting for you."
+  },
+  {
+    "id": "object_memorybox",
+    "name": "Memory Box",
+    "type": "object",
+    "x": 368,
+    "y": 304,
+    "action": "open",
+    "minigame": "trivia",
+    "dialog": "A box filled with memories..."
+  }
+]
