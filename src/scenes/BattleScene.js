@@ -235,7 +235,27 @@ export default class BattleScene extends Phaser.Scene {
 
     const [dMin, dMax] = move.damage ?? [0.20, 0.28];
     const dmg = Phaser.Math.FloatBetween(dMin, dMax);
-    this._drainHP(this._oppHP, dmg, () => {});
+    this._drainOppHP(dmg);
+  }
+
+  _drainOppHP(amount) {
+    const bar    = this._oppHP;
+    const target = Math.max(0, bar.currentRatio - amount);
+    const start  = bar.currentRatio;
+    const startT = this.time.now;
+    const dur    = 600;
+
+    this.time.addEvent({
+      delay: 16, repeat: Math.ceil(dur / 16),
+      callback: () => {
+        const t = Math.min(1, (this.time.now - startT) / dur);
+        bar.currentRatio = start + (target - start) * t;
+        const color = bar.currentRatio > 0.5 ? HP_GREEN : bar.currentRatio > 0.25 ? HP_YEL : HP_RED;
+        bar.fill.clear();
+        bar.fill.fillStyle(color, 1);
+        bar.fill.fillRect(0, 0, bar.trackW * bar.currentRatio, bar.trackH);
+      },
+    });
   }
 
   _endBattle() {
