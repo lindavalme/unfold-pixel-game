@@ -30,7 +30,7 @@
       "opponent_sprite": null,
       "moves": [
         { "name": "Feet Licks",      "flavor": "Mochi got your toes. You can't move!" },
-        { "name": "Poop on Carpet",  "flavor": "Not again. You can't even be mad." },
+        { "name": "Poop on Carpet",  "flavor": "Right in the middle of the rug. No fucks given." },
         { "name": "Cute Head Tilt",  "flavor": "It's super effective. Your heart melted." }
       ],
       "outcome_message": "You KO'd. Mochi stood victorious, tail wagging, completely unbothered.",
