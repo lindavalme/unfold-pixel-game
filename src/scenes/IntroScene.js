@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import HOME from '../data/home.json';
 
 const WARM = '#f7c948';
-const DIM  = '#666688';
+const DIM  = '#aaaacc';
 const PS2P = '"Press Start 2P"';
 
 export default class IntroScene extends Phaser.Scene {
