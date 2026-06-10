@@ -232,16 +232,24 @@ export default class WorldScene extends Phaser.Scene {
 
     this.events.on('proximityEnter', (entity) => this.dialogBox.show(entity));
     this.events.on('proximityLeave', ()       => this.dialogBox.hide());
-    this.events.on('interact',       (entity) => this.dialogBox.show(entity));
+    this.events.on('interact', (entity) => {
+      if (entity.minigame?.type === 'battle') {
+        this.dialogBox.hide(false);
+        this.scene.launch('BattleScene', { config: entity.minigame });
+        this.scene.pause();
+      } else {
+        this.dialogBox.show(entity);
+      }
+    });
 
-    if (DEBUG_PROXIMITY) this._drawEntityMarkers();
+    this._drawEntityMarkers();
 
     if (DEBUG_PROXIMITY) {
       this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);
     }
 
     this._sparkle = this.add.text(0, 0, '★', {
-      fontFamily: 'Silkscreen', fontSize: '12px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#ffffff', resolution: 2,
     }).setOrigin(0.5, 1).setDepth(51).setAlpha(0);
 
@@ -271,7 +279,7 @@ export default class WorldScene extends Phaser.Scene {
 
       const label = this.add.text(entity.x, entity.y - 20, entity.name, {
         fontFamily: 'Silkscreen',
-        fontSize: '10px',
+        fontSize: '15px',
         color: '#' + color.toString(16).padStart(6, '0'),
         resolution: 2,
         backgroundColor: '#000000cc',

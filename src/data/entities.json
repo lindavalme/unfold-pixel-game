@@ -23,7 +23,17 @@
     "x": 368,
     "y": 304,
     "action": "open",
-    "minigame": "trivia",
-    "dialog": "A box filled with memories..."
+    "dialog": "A box filled with memories...",
+    "minigame": {
+      "type": "battle",
+      "opponent_name": "Alina",
+      "opponent_sprite": null,
+      "moves": [
+        { "name": "Hunger Cry",        "flavor": "It's 3am. You can't think straight!" },
+        { "name": "Poopy Diaper",      "flavor": "A direct hit! You can't escape!" },
+        { "name": "Cuteness Overload", "flavor": "It's super effective!" }
+      ],
+      "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation."
+    }
   }
 ]

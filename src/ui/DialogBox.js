@@ -14,6 +14,7 @@ export default class DialogBox {
   constructor(scene) {
     this.scene   = scene;
     this.visible = false;
+    this._entity = null;
 
     const { width, height } = scene.scale;
     this._w = width;
@@ -22,29 +23,51 @@ export default class DialogBox {
     this._bg = scene.add.graphics()
       .setScrollFactor(0).setDepth(DEPTH).setAlpha(0);
 
+    // Tap zone over the dialog area — fires 'interact' on mobile
+    this._tapZone = scene.add.rectangle(
+      0, height - BOX_HEIGHT - PAD,
+      width, BOX_HEIGHT + PAD,
+      0x000000, 0
+    ).setScrollFactor(0).setDepth(DEPTH + 2).setOrigin(0, 0)
+     .setInteractive()
+     .on('pointerdown', () => {
+       if (this.visible && this._entity) {
+         scene.events.emit('interact', this._entity);
+       }
+     });
+
     // Portrait placeholder (NPC only)
     this._portrait = scene.add.graphics()
       .setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._nameText = scene.add.text(0, 0, '', {
-      fontFamily: 'Silkscreen', fontSize: '12px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#ffffff', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._bodyText = scene.add.text(0, 0, '', {
-      fontFamily: 'Silkscreen', fontSize: '11px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#ffffff', wordWrap: { width: width - (PAD + BORDER + 8) * 2 },
       lineSpacing: 6, resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._actionText = scene.add.text(0, 0, '', {
-      fontFamily: 'Silkscreen', fontSize: '10px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#aaaaaa', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
+
+    // Pulsing tap indicator bottom-right corner of dialog
+    this._tapHint = scene.add.text(
+      width - PAD - BORDER - 6,
+      height - PAD - BORDER - 6,
+      '▶ tap',
+      { fontFamily: '"Press Start 2P"', fontSize: '15px', color: '#f7c948', resolution: 2 }
+    ).setOrigin(1, 1).setScrollFactor(0).setDepth(DEPTH + 2).setAlpha(0);
   }
 
   show(entity) {
     if (this.visible) this.hide(false);
+    this._entity = entity;
 
     const style  = TYPE_STYLE[entity.type] ?? DEFAULT_STYLE;
     const w      = this._w;
@@ -103,11 +126,23 @@ export default class DialogBox {
 
     const targets = [bg, this._nameText, this._bodyText, this._actionText, portrait];
     this.scene.tweens.add({ targets, alpha: 1, duration: 120, ease: 'Linear' });
+
+    // Pulse tap hint
+    this.scene.tweens.killTweensOf(this._tapHint);
+    this._tapHint.setAlpha(1);
+    this.scene.tweens.add({
+      targets: this._tapHint, alpha: 0.25, duration: 600,
+      ease: 'Sine.easeInOut', yoyo: true, repeat: -1,
+    });
+
     this.visible = true;
   }
 
   hide(animate = true) {
     if (!this.visible) return;
+    this._entity = null;
+    this.scene.tweens.killTweensOf(this._tapHint);
+    this._tapHint.setAlpha(0);
     const targets = [this._bg, this._nameText, this._bodyText, this._actionText, this._portrait];
     if (animate) {
       this.scene.tweens.add({ targets, alpha: 0, duration: 100, ease: 'Linear' });
