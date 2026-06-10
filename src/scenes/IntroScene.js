@@ -28,7 +28,7 @@ export default class IntroScene extends Phaser.Scene {
 
     // Title — bounces in
     this.add.text(cx, cy - 40, HOME.title.toUpperCase(), {
-      fontFamily: PS2P, fontSize: '20px',
+      fontFamily: PS2P, fontSize: '26px',
       color: WARM, resolution: 2,
       wordWrap: { width: width - 80 }, align: 'center',
     }).setOrigin(0.5).setScale(0.3).setAlpha(0).setDepth(2);
@@ -41,8 +41,8 @@ export default class IntroScene extends Phaser.Scene {
     });
 
     // Tagline
-    const tagline = this.add.text(cx, cy + 14, `for ${HOME.recipient}`, {
-      fontFamily: PS2P, fontSize: '9px',
+    const tagline = this.add.text(cx, cy + 24, `for ${HOME.recipient}`, {
+      fontFamily: PS2P, fontSize: '12px',
       color: DIM, resolution: 2,
     }).setOrigin(0.5).setAlpha(0).setDepth(2);
 
@@ -50,7 +50,7 @@ export default class IntroScene extends Phaser.Scene {
 
     // Blinking PRESS START
     this._prompt = this.add.text(cx, height - 60, 'PRESS START', {
-      fontFamily: PS2P, fontSize: '10px',
+      fontFamily: PS2P, fontSize: '14px',
       color: WARM, resolution: 2,
     }).setOrigin(0.5).setAlpha(0).setDepth(2);
 
