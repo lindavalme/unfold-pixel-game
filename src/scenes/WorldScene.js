@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import InteractionSystem from '../systems/InteractionSystem.js';
+
+const DEBUG_PROXIMITY = true;
 
 const TILESET_NAMES = [
   'Generic_Home_1_Layer_1_32x32',
@@ -214,6 +217,21 @@ export default class WorldScene extends Phaser.Scene {
       .setBounds(0, 0, map.widthInPixels, map.heightInPixels)
       .startFollow(this.player, true, 1, 1);
 
+    // Interaction system
+    this.interactionSystem = new InteractionSystem(this);
+    this.interactionSystem.loadFromMap(map);
+
+    this.events.on('proximityEnter', (entity) => {
+      console.log('[Proximity] Enter:', entity.name, `(${entity.type})`, entity);
+    });
+    this.events.on('proximityLeave', (entity) => {
+      console.log('[Proximity] Leave:', entity.name);
+    });
+
+    if (DEBUG_PROXIMITY) {
+      this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);
+    }
+
     this._joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
     if (this.sys.game.device.input.touch) {
       this._createJoystick();
@@ -296,6 +314,16 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   update() {
+    const near = this.interactionSystem.update(this.player.x, this.player.y);
+
+    if (DEBUG_PROXIMITY && this._debugGfx) {
+      this._debugGfx.clear();
+      if (near) {
+        this._debugGfx.lineStyle(2, 0xffff00, 0.8);
+        this._debugGfx.strokeCircle(near.x, near.y, 16);
+      }
+    }
+
     const { up, down, left, right, w, s, a, d } = this.cursors;
     const SPEED = 120;
 
