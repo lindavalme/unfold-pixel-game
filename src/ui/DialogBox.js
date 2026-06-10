@@ -27,18 +27,18 @@ export default class DialogBox {
       .setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._nameText = scene.add.text(0, 0, '', {
-      fontFamily: '"Press Start 2P"', fontSize: '8px',
+      fontFamily: 'Silkscreen', fontSize: '12px',
       color: '#ffffff', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._bodyText = scene.add.text(0, 0, '', {
-      fontFamily: '"Press Start 2P"', fontSize: '8px',
+      fontFamily: 'Silkscreen', fontSize: '11px',
       color: '#ffffff', wordWrap: { width: width - (PAD + BORDER + 8) * 2 },
-      lineSpacing: 8, resolution: 2,
+      lineSpacing: 6, resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._actionText = scene.add.text(0, 0, '', {
-      fontFamily: '"Press Start 2P"', fontSize: '6px',
+      fontFamily: 'Silkscreen', fontSize: '10px',
       color: '#aaaaaa', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
   }
