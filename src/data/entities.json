@@ -34,8 +34,8 @@
         { "name": "Cuteness Overload", "flavor": "It's super effective!" }
       ],
       "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation.",
-      "partner": "Dad",
-      "distraction": "Cocomelon",
+      "partner": "Linda",
+      "distraction": "Daniel Tiger",
       "player_moves": [
         { "name": "Tag in {partner}",      "flavor": "{partner} stumbles in half asleep... barely helped.", "damage": [0.20, 0.24] },
         { "name": "Turn on {distraction}", "flavor": "{distraction} deployed! It's super effective!",      "damage": [0.28, 0.32] },
