@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import InteractionSystem from '../systems/InteractionSystem.js';
 import DialogBox from '../ui/DialogBox.js';
+import ToastMessage from '../ui/ToastMessage.js';
 import ENTITIES from '../data/entities.json';
 
 const DEBUG_PROXIMITY = typeof __DEV__ !== 'undefined' && __DEV__;
@@ -229,9 +230,11 @@ export default class WorldScene extends Phaser.Scene {
     this.interactionSystem.setEntities(ENTITIES);
 
     this.dialogBox = new DialogBox(this);
+    this.toast     = new ToastMessage(this);
 
     this.events.on('proximityEnter', (entity) => this.dialogBox.show(entity));
     this.events.on('proximityLeave', ()       => this.dialogBox.hide());
+    this.events.on('dialogClosed',   (entity) => this.toast.show(`system: dialog closed [${entity.name}]`));
     this.events.on('interact', (entity) => {
       if (entity.minigame?.type === 'battle') {
         this.dialogBox.hide(false);
