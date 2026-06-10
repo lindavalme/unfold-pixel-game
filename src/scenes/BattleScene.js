@@ -134,10 +134,11 @@ export default class BattleScene extends Phaser.Scene {
     const beats = [];
     beats.push({ type: 'text',  text: `A wild ${opponent_name} appeared!` });
     beats.push({ type: 'text',  text: `Go! You!` });
+    const step = 1 / moves.length;
     for (const move of moves) {
       beats.push({ type: 'text',  text: `${opponent_name} used\n${move.name}!` });
       beats.push({ type: 'text',  text: move.flavor });
-      beats.push({ type: 'drain' });
+      beats.push({ type: 'drain', amount: step });
     }
     beats.push({ type: 'text',  text: `You fainted!` });
     beats.push({ type: 'shake' });
@@ -150,7 +151,7 @@ export default class BattleScene extends Phaser.Scene {
     if (this._seqIndex >= this._sequence.length) return;
     const beat = this._sequence[this._seqIndex++];
     if      (beat.type === 'text')  this._showText(beat.text, () => this._waitForTap());
-    else if (beat.type === 'drain') this._drainHP(this._plrHP, () => this.time.delayedCall(300, () => this._nextBeat()));
+    else if (beat.type === 'drain') this._drainHP(this._plrHP, beat.amount, () => this.time.delayedCall(300, () => this._nextBeat()));
     else if (beat.type === 'shake') { this.cameras.main.shake(500, 0.014); this.time.delayedCall(600, () => this._nextBeat()); }
     else if (beat.type === 'end')   this.time.delayedCall(700, () => this._endBattle());
   }
@@ -223,9 +224,10 @@ export default class BattleScene extends Phaser.Scene {
     return { fill, trackW, trackH, currentRatio: 1 };
   }
 
-  _drainHP(bar, onDone) {
+  _drainHP(bar, amount, onDone) {
+    const target = Math.max(0, bar.currentRatio - amount);
     this.tweens.add({
-      targets: bar, currentRatio: 0,
+      targets: bar, currentRatio: target,
       duration: 900, ease: 'Linear',
       onUpdate: () => {
         bar.fill.clear();
