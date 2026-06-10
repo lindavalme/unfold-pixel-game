@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import InteractionSystem from '../systems/InteractionSystem.js';
+import DialogBox from '../ui/DialogBox.js';
 
 const DEBUG_PROXIMITY = true;
 
@@ -221,12 +222,10 @@ export default class WorldScene extends Phaser.Scene {
     this.interactionSystem = new InteractionSystem(this);
     this.interactionSystem.loadFromMap(map);
 
-    this.events.on('proximityEnter', (entity) => {
-      console.log('[Proximity] Enter:', entity.name, `(${entity.type})`, entity);
-    });
-    this.events.on('proximityLeave', (entity) => {
-      console.log('[Proximity] Leave:', entity.name);
-    });
+    this.dialogBox = new DialogBox(this);
+
+    this.events.on('proximityEnter', (entity) => this.dialogBox.show(entity));
+    this.events.on('proximityLeave', ()       => this.dialogBox.hide());
 
     if (DEBUG_PROXIMITY) {
       this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);
