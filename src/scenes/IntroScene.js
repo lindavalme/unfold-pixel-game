@@ -42,7 +42,7 @@ export default class IntroScene extends Phaser.Scene {
 
     // Tagline
     const tagline = this.add.text(cx, cy + 24, `for ${HOME.recipient}`, {
-      fontFamily: PS2P, fontSize: '12px',
+      fontFamily: PS2P, fontSize: '14px',
       color: DIM, resolution: 2,
     }).setOrigin(0.5).setAlpha(0).setDepth(2);
 
