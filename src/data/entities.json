@@ -26,20 +26,20 @@
     "dialog": "A box filled with memories...",
     "minigame": {
       "type": "battle",
-      "opponent_name": "Alina",
+      "opponent_name": "Mochi",
       "opponent_sprite": null,
       "moves": [
-        { "name": "Hunger Cry",        "flavor": "It's 3am. You can't think straight!" },
-        { "name": "Poopy Diaper",      "flavor": "A direct hit! You can't escape!" },
-        { "name": "Cuteness Overload", "flavor": "It's super effective!" }
+        { "name": "Feet Licks",      "flavor": "Mochi got your toes. You can't move!" },
+        { "name": "Poop on Carpet",  "flavor": "Not again. You can't even be mad." },
+        { "name": "Cute Head Tilt",  "flavor": "It's super effective. Your heart melted." }
       ],
-      "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation.",
-      "partner": "Dad",
-      "distraction": "Cocomelon",
+      "outcome_message": "You blacked out... overwhelmed with fluff and unconditional love.",
+      "partner": "Marlana",
+      "distraction": "a Tennis Ball",
       "player_moves": [
-        { "name": "Tag in {partner}",      "flavor": "{partner} stumbles in half asleep... barely helped.", "damage": [0.20, 0.24] },
-        { "name": "Turn on {distraction}", "flavor": "{distraction} deployed! It's super effective!",      "damage": [0.28, 0.32] },
-        { "name": "Cry",                   "flavor": "You cried. It felt right. Nothing changed.",          "damage": [0, 0] }
+        { "name": "Tag in {partner}",      "flavor": "{partner} rushes in... Mochi licked her too.",        "damage": [0.20, 0.24] },
+        { "name": "Throw {distraction}",   "flavor": "{distraction} deployed! It's super effective!",      "damage": [0.28, 0.32] },
+        { "name": "Play Dead",             "flavor": "You played dead. Mochi sat on you.",                  "damage": [0, 0] }
       ]
     }
   }
