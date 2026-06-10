@@ -196,8 +196,8 @@ export default class BattleScene extends Phaser.Scene {
     this._prompt.setAlpha(0);
 
     const btnW   = width - 32;
-    const btnH   = 26;
-    const startY = dlgY + 34;
+    const btnH   = 34;
+    const startY = dlgY + 16;
     const btns   = [];
 
     player_moves.forEach((move, i) => {
