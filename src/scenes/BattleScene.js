@@ -233,8 +233,8 @@ export default class BattleScene extends Phaser.Scene {
     const flavor = this._resolve(move.flavor);
     this._showText(flavor, () => this._waitForTap());
 
-    // Player does tiny damage to opponent (6-9% per move — never lethal)
-    const dmg = Phaser.Math.FloatBetween(0.06, 0.09);
+    // Player chips opponent HP (20-28% per move, capped at 75% total — never lethal)
+    const dmg = Phaser.Math.FloatBetween(0.20, 0.28);
     this._drainHP(this._oppHP, dmg, () => {});
   }
 
