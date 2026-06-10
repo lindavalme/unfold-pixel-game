@@ -239,9 +239,11 @@ export default class WorldScene extends Phaser.Scene {
       color: '#ffffff', resolution: 2,
     }).setOrigin(0.5, 1).setDepth(51).setAlpha(0);
 
+    // Bob offset tracked separately so update() can set base position freely
+    this._sparkleBob = 0;
     this.tweens.add({
-      targets: this._sparkle,
-      y: '-=6',
+      targets: this,
+      _sparkleBob: -6,
       duration: 500,
       ease: 'Sine.easeInOut',
       yoyo: true,
@@ -366,7 +368,7 @@ export default class WorldScene extends Phaser.Scene {
       if (near) {
         const TYPE_COLOR = { npc: '#44ccff', object: '#ff9944', sign: '#88ff88' };
         this._sparkle
-          .setPosition(near.x, near.y - 20)
+          .setPosition(near.x, near.y - 20 + this._sparkleBob)
           .setColor(TYPE_COLOR[near.type] ?? '#ffffff')
           .setAlpha(1);
       } else {
