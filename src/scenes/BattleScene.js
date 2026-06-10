@@ -140,7 +140,7 @@ export default class BattleScene extends Phaser.Scene {
     beats.push({ type: 'text', text: `A wild ${opponent_name} appeared!` });
     beats.push({ type: 'text', text: `Go! You!` });
 
-    const step = 1 / moves.length;
+    const step = 0.88 / moves.length; // leave ~12% for the final blow
     for (const move of moves) {
       beats.push({ type: 'text',        text: `${opponent_name} used\n${move.name}!` });
       beats.push({ type: 'text',        text: move.flavor });
@@ -150,7 +150,8 @@ export default class BattleScene extends Phaser.Scene {
       }
     }
 
-    beats.push({ type: 'text',  text: `You fainted!` });
+    beats.push({ type: 'text',    text: `You fainted!` });
+    beats.push({ type: 'drain-rest' }); // drain the remaining sliver to zero
     beats.push({ type: 'shake' });
     beats.push({ type: 'text',  text: outcome_message });
     beats.push({ type: 'end' });
@@ -160,8 +161,9 @@ export default class BattleScene extends Phaser.Scene {
   _nextBeat() {
     if (this._seqIndex >= this._sequence.length) return;
     const beat = this._sequence[this._seqIndex++];
-    if      (beat.type === 'text')  this._showText(beat.text, () => this._waitForTap());
-    else if (beat.type === 'drain')       this._drainHP(this._plrHP, beat.amount, () => this.time.delayedCall(300, () => this._nextBeat()));
+    if      (beat.type === 'text')       this._showText(beat.text, () => this._waitForTap());
+    else if (beat.type === 'drain')      this._drainHP(this._plrHP, beat.amount, () => this.time.delayedCall(300, () => this._nextBeat()));
+    else if (beat.type === 'drain-rest') this._drainHP(this._plrHP, this._plrHP.currentRatio, () => this.time.delayedCall(200, () => this._nextBeat()));
     else if (beat.type === 'player-turn') this._showPlayerMoves();
     else if (beat.type === 'shake') { this.cameras.main.shake(500, 0.014); this.time.delayedCall(600, () => this._nextBeat()); }
     else if (beat.type === 'end')   this.time.delayedCall(700, () => this._endBattle());
