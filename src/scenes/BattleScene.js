@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 
-const PS2P     = '"Press Start 2P"';
-const SILK     = 'Silkscreen';
-const BG_LIGHT = 0xf0e8c8;
-const BG_DARK  = 0x2a2a1a;
+const PS2P    = '"Press Start 2P"';
+const SILK    = 'Silkscreen';
+const WARM    = 0xf7c948;
+const WARM_S  = '#f7c948';
+const WHITE   = '#ffffff';
+const DIM     = '#aaaacc';
 const HP_GREEN = 0x50c878;
-const HP_RED   = 0xe03030;
-const DIALOG_BG = 0xf0e8c8;
-const TEXT_DARK = '#1a1a1a';
+const HP_YEL   = 0xf0c030;
+const HP_RED   = 0xe03050;
 
 export default class BattleScene extends Phaser.Scene {
   constructor() {
@@ -19,217 +20,216 @@ export default class BattleScene extends Phaser.Scene {
       opponent_name: 'Mystery',
       opponent_sprite: null,
       moves: [
-        { name: 'Surprise Attack',   flavor: 'You were caught off guard!' },
-        { name: 'Charm',             flavor: "It's super effective!" },
+        { name: 'Surprise Attack', flavor: 'You were caught off guard!' },
       ],
-      outcome_message: 'You blacked out... but you\'re smiling.',
+      outcome_message: 'You blacked out... overwhelmed with love.',
     };
   }
 
   create() {
     const { width, height } = this.scale;
-
-    // ── Flash transition in ──────────────────────────────────────────────
     this.cameras.main.setBackgroundColor(0xffffff);
-    let flashes = 0;
-    const flash = this.time.addEvent({
-      delay: 80, repeat: 5,
+
+    // Flash in
+    let f = 0;
+    this.time.addEvent({
+      delay: 70, repeat: 5,
       callback: () => {
-        flashes++;
-        this.cameras.main.setBackgroundColor(flashes % 2 === 0 ? 0xffffff : BG_LIGHT);
-        if (flashes >= 6) this._buildArena(width, height);
+        this.cameras.main.setBackgroundColor(++f % 2 === 0 ? 0xffffff : 0x000000);
+        if (f >= 6) this._buildArena(width, height);
       },
     });
   }
 
   _buildArena(width, height) {
-    this.cameras.main.setBackgroundColor(BG_LIGHT);
-    const dialogH = 110;
+    const dialogH = 120;
     const arenaH  = height - dialogH;
 
-    // ── Background stripes (classic Pokémon grass/platform feel) ────────
-    const bg = this.add.graphics();
-    bg.fillStyle(0xe8ddb8, 1);
-    bg.fillRect(0, 0, width, arenaH);
-    // Ground lines
-    bg.lineStyle(2, 0xc8b888, 0.6);
-    for (let y = arenaH * 0.55; y < arenaH; y += 8) bg.lineBetween(0, y, width, y);
+    this.cameras.main.setBackgroundColor(0x0d0d1a);
 
-    // ── Opponent platform (top-right) ────────────────────────────────────
-    const oppPlatX = width * 0.62, oppPlatY = arenaH * 0.38;
-    this._drawPlatform(oppPlatX, oppPlatY, 120, 18, 0xb8a870);
+    // ── Starfield (reuse game aesthetic) ────────────────────────────────
+    const stars = this.add.graphics().setDepth(0);
+    for (let i = 0; i < 60; i++) {
+      stars.fillStyle(0xffffff, Phaser.Math.FloatBetween(0.1, 0.5));
+      stars.fillRect(
+        Phaser.Math.Between(0, width),
+        Phaser.Math.Between(0, arenaH),
+        Phaser.Math.Between(1, 2), Phaser.Math.Between(1, 2)
+      );
+    }
 
-    // Opponent sprite placeholder
-    this._oppSprite = this._drawCharPlaceholder(oppPlatX, oppPlatY - 52, 48, 0xe05050);
+    // ── Ground divider ───────────────────────────────────────────────────
+    const ground = this.add.graphics().setDepth(1);
+    ground.fillStyle(0x1a1a3a, 1);
+    ground.fillRect(0, arenaH * 0.5, width, arenaH * 0.5);
+    ground.lineStyle(2, WARM, 0.3);
+    ground.lineBetween(0, arenaH * 0.5, width, arenaH * 0.5);
 
-    // Opponent name + HP
-    this._oppHPBar = this._buildHPBar(width * 0.04, arenaH * 0.08, 180, this._config.opponent_name, true);
+    // ── Opponent platform (top-right) ─────────────────────────────────
+    const oppX = width * 0.68, oppPlatY = arenaH * 0.44;
+    this._drawPlatform(oppX, oppPlatY, 110, 16, 0x2a2a5a);
+    this._oppSprite = this._drawChar(oppX, oppPlatY - 56, 40, WARM);
 
-    // ── Player platform (bottom-left) ────────────────────────────────────
-    const plrPlatX = width * 0.28, plrPlatY = arenaH * 0.72;
-    this._drawPlatform(plrPlatX, plrPlatY, 140, 22, 0x908050);
+    // ── Player platform (bottom-left) ────────────────────────────────
+    const plrX = width * 0.28, plrPlatY = arenaH * 0.78;
+    this._drawPlatform(plrX, plrPlatY, 130, 20, 0x1a3a2a);
+    this._plrSprite = this._drawChar(plrX, plrPlatY - 68, 44, 0x5090e0);
 
-    // Player sprite placeholder
-    this._plrSprite = this._drawCharPlaceholder(plrPlatX, plrPlatY - 64, 48, 0x5090e0);
+    // ── HP panels ────────────────────────────────────────────────────
+    this._oppHP = this._buildHPPanel(16,          arenaH * 0.06, 180, this._config.opponent_name);
+    this._plrHP = this._buildHPPanel(width - 204, arenaH * 0.52, 188, 'YOU');
 
-    // Player name + HP
-    this._plrHPBar = this._buildHPBar(width * 0.52, arenaH * 0.58, 200, 'YOU', false);
+    // ── VS splash ─────────────────────────────────────────────────────
+    const vs = this.add.text(width / 2, arenaH / 2, 'VS', {
+      fontFamily: PS2P, fontSize: '36px', color: WARM_S,
+      stroke: '#000000', strokeThickness: 6, resolution: 2,
+    }).setOrigin(0.5).setDepth(10).setAlpha(0);
 
-    // ── Dialog box ───────────────────────────────────────────────────────
+    this.tweens.add({
+      targets: vs, alpha: 1, scale: 1.3,
+      duration: 200, ease: 'Back.easeOut',
+      onComplete: () => {
+        this.time.delayedCall(400, () => {
+          this.tweens.add({ targets: vs, alpha: 0, duration: 200 });
+        });
+      },
+    });
+
+    // ── Dialog box ────────────────────────────────────────────────────
     const dlgY = arenaH;
-    const dlg  = this.add.graphics();
-    dlg.fillStyle(DIALOG_BG, 1);
+    const dlg  = this.add.graphics().setDepth(5);
+    dlg.fillStyle(0x0d0d1a, 0.97);
     dlg.fillRect(0, dlgY, width, dialogH);
-    dlg.lineStyle(3, 0x1a1a1a, 1);
+    dlg.lineStyle(3, WARM, 0.9);
     dlg.strokeRect(0, dlgY, width, dialogH);
-    // Inner border
-    dlg.lineStyle(1, 0x888870, 0.5);
-    dlg.strokeRect(6, dlgY + 6, width - 12, dialogH - 12);
+    dlg.lineStyle(1, WARM, 0.2);
+    dlg.strokeRect(5, dlgY + 5, width - 10, dialogH - 10);
 
     this._dialogText = this.add.text(20, dlgY + 18, '', {
-      fontFamily: SILK, fontSize: '13px',
-      color: TEXT_DARK, wordWrap: { width: width - 40 },
+      fontFamily: SILK, fontSize: '14px',
+      color: WHITE, wordWrap: { width: width - 44 },
       lineSpacing: 6, resolution: 2,
     }).setDepth(10);
 
-    this._promptText = this.add.text(width - 20, dlgY + dialogH - 20, '▶', {
-      fontFamily: PS2P, fontSize: '8px', color: TEXT_DARK, resolution: 2,
+    this._prompt = this.add.text(width - 18, dlgY + dialogH - 16, '▶', {
+      fontFamily: PS2P, fontSize: '8px', color: WARM_S, resolution: 2,
     }).setOrigin(1, 1).setDepth(10).setAlpha(0);
 
-    // ── Start sequence ───────────────────────────────────────────────────
+    // ── Start sequence ────────────────────────────────────────────────
     this._sequence = this._buildSequence();
     this._seqIndex = 0;
     this._waiting  = false;
 
-    this.time.delayedCall(300, () => this._nextBeat());
+    this.time.delayedCall(700, () => this._nextBeat());
 
     this.input.on('pointerdown', () => this._onAdvance());
     this.input.keyboard.on('keydown-SPACE', () => this._onAdvance());
     this.input.keyboard.on('keydown-ENTER', () => this._onAdvance());
   }
 
-  // ── Sequence builder ──────────────────────────────────────────────────
+  // ── Sequence ─────────────────────────────────────────────────────────
 
   _buildSequence() {
     const { opponent_name, moves, outcome_message } = this._config;
     const beats = [];
-
-    beats.push({ type: 'text', text: `A wild ${opponent_name} appeared!` });
-    beats.push({ type: 'text', text: `Go! You!` });
-
+    beats.push({ type: 'text',  text: `A wild ${opponent_name} appeared!` });
+    beats.push({ type: 'text',  text: `Go! You!` });
     for (const move of moves) {
-      beats.push({ type: 'text',   text: `${opponent_name} used ${move.name}!` });
-      beats.push({ type: 'text',   text: move.flavor });
-      beats.push({ type: 'drain',  target: 'player' });
+      beats.push({ type: 'text',  text: `${opponent_name} used\n${move.name}!` });
+      beats.push({ type: 'text',  text: move.flavor });
+      beats.push({ type: 'drain' });
     }
-
-    beats.push({ type: 'text',  text: 'You fainted!' });
-    beats.push({ type: 'shake', target: 'player' });
+    beats.push({ type: 'text',  text: `You fainted!` });
+    beats.push({ type: 'shake' });
     beats.push({ type: 'text',  text: outcome_message });
     beats.push({ type: 'end' });
-
     return beats;
   }
 
   _nextBeat() {
     if (this._seqIndex >= this._sequence.length) return;
     const beat = this._sequence[this._seqIndex++];
-
-    if (beat.type === 'text') {
-      this._showText(beat.text, () => this._waitForTap());
-
-    } else if (beat.type === 'drain') {
-      this._drainHP(this._plrHPBar, () => {
-        this.time.delayedCall(300, () => this._nextBeat());
-      });
-
-    } else if (beat.type === 'shake') {
-      this.cameras.main.shake(400, 0.012);
-      this.time.delayedCall(500, () => this._nextBeat());
-
-    } else if (beat.type === 'end') {
-      this.time.delayedCall(800, () => this._endBattle());
-    }
+    if      (beat.type === 'text')  this._showText(beat.text, () => this._waitForTap());
+    else if (beat.type === 'drain') this._drainHP(this._plrHP, () => this.time.delayedCall(300, () => this._nextBeat()));
+    else if (beat.type === 'shake') { this.cameras.main.shake(500, 0.014); this.time.delayedCall(600, () => this._nextBeat()); }
+    else if (beat.type === 'end')   this.time.delayedCall(700, () => this._endBattle());
   }
 
   _waitForTap() {
     this._waiting = true;
-    this.tweens.add({
-      targets: this._promptText, alpha: 1, duration: 200,
+    this.tweens.add({ targets: this._prompt, alpha: 1, duration: 200 });
+    // Pulse the prompt
+    this.time.delayedCall(200, () => {
+      if (this._waiting) {
+        this.tweens.add({ targets: this._prompt, alpha: 0.3, duration: 400, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
+      }
     });
   }
 
   _onAdvance() {
     if (!this._waiting) return;
     this._waiting = false;
-    this._promptText.setAlpha(0);
+    this.tweens.killTweensOf(this._prompt);
+    this._prompt.setAlpha(0);
     this._nextBeat();
   }
 
   _endBattle() {
-    this.cameras.main.fadeOut(600, 0, 0, 0);
+    this.cameras.main.fadeOut(700, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.stop('BattleScene');
       this.scene.resume('WorldScene');
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────
+  // ── Drawing helpers ───────────────────────────────────────────────────
 
   _showText(text, onDone) {
     this._dialogText.setText('');
     let i = 0;
     this.time.addEvent({
-      delay: 30, repeat: text.length - 1,
+      delay: 28, repeat: text.length - 1,
       callback: () => {
-        i++;
-        this._dialogText.setText(text.substring(0, i));
+        this._dialogText.setText(text.substring(0, ++i));
         if (i >= text.length && onDone) onDone();
       },
     });
   }
 
-  _buildHPBar(x, y, barWidth, name, isOpponent) {
-    const panel = this.add.graphics();
-    // Panel background
-    panel.fillStyle(0xd8d0a8, 1);
-    panel.fillRect(x, y, barWidth, 42);
-    panel.lineStyle(2, 0x1a1a1a, 1);
-    panel.strokeRect(x, y, barWidth, 42);
+  _buildHPPanel(x, y, w, name) {
+    const gfx = this.add.graphics().setDepth(4);
+    gfx.fillStyle(0x0d0d1a, 0.9);
+    gfx.fillRect(x, y, w, 46);
+    gfx.lineStyle(2, WARM, 0.6);
+    gfx.strokeRect(x, y, w, 46);
 
-    this.add.text(x + 8, y + 6, name, {
-      fontFamily: PS2P, fontSize: '7px', color: TEXT_DARK, resolution: 2,
-    });
+    this.add.text(x + 8, y + 7, name, {
+      fontFamily: PS2P, fontSize: '7px', color: WARM_S, resolution: 2,
+    }).setDepth(5);
 
-    this.add.text(x + 8, y + 22, 'HP', {
-      fontFamily: PS2P, fontSize: '6px', color: '#555533', resolution: 2,
-    });
+    this.add.text(x + 8, y + 26, 'HP', {
+      fontFamily: PS2P, fontSize: '6px', color: DIM, resolution: 2,
+    }).setDepth(5);
 
-    // HP bar track
-    const trackX = x + 28, trackY = y + 24, trackW = barWidth - 36, trackH = 8;
-    panel.fillStyle(0x303020, 1);
-    panel.fillRect(trackX, trackY, trackW, trackH);
+    const trackX = x + 28, trackY = y + 28, trackW = w - 38, trackH = 8;
+    gfx.fillStyle(0x111122, 1);
+    gfx.fillRect(trackX, trackY, trackW, trackH);
 
-    // HP bar fill (stored for tween)
-    const fill = this.add.graphics();
+    const fill = this.add.graphics().setDepth(5);
     fill.fillStyle(HP_GREEN, 1);
     fill.fillRect(0, 0, trackW, trackH);
     fill.setPosition(trackX, trackY);
 
-    return { fill, trackW, trackH, trackX, trackY, currentRatio: 1 };
+    return { fill, trackW, trackH, currentRatio: 1 };
   }
 
   _drainHP(bar, onDone) {
-    const targetRatio = 0;
     this.tweens.add({
-      targets: bar,
-      currentRatio: targetRatio,
-      duration: 800,
-      ease: 'Linear',
+      targets: bar, currentRatio: 0,
+      duration: 900, ease: 'Linear',
       onUpdate: () => {
         bar.fill.clear();
-        const color = bar.currentRatio > 0.5 ? HP_GREEN
-          : bar.currentRatio > 0.25 ? 0xf0c030 : HP_RED;
+        const color = bar.currentRatio > 0.5 ? HP_GREEN : bar.currentRatio > 0.25 ? HP_YEL : HP_RED;
         bar.fill.fillStyle(color, 1);
         bar.fill.fillRect(0, 0, bar.trackW * bar.currentRatio, bar.trackH);
       },
@@ -238,24 +238,28 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   _drawPlatform(cx, y, w, h, color) {
-    const gfx = this.add.graphics();
+    const gfx = this.add.graphics().setDepth(2);
     gfx.fillStyle(color, 1);
     gfx.fillEllipse(cx, y, w, h);
-    gfx.fillStyle(Phaser.Display.Color.ValueToColor(color).darken(20).color, 1);
-    gfx.fillEllipse(cx, y + 4, w, h * 0.5);
+    gfx.lineStyle(1, WARM, 0.2);
+    gfx.strokeEllipse(cx, y, w, h);
   }
 
-  _drawCharPlaceholder(cx, y, size, color) {
-    const gfx = this.add.graphics();
+  _drawChar(cx, baseY, size, color) {
+    const gfx = this.add.graphics().setDepth(3);
+    const headR = size * 0.38;
     // Body
     gfx.fillStyle(color, 1);
-    gfx.fillRect(cx - size / 2, y - size, size, size);
+    gfx.fillRect(cx - size / 2, baseY - size, size, size);
     // Head
-    gfx.fillCircle(cx, y - size - size * 0.4, size * 0.4);
-    // Simple outline
-    gfx.lineStyle(2, 0x000000, 0.4);
-    gfx.strokeRect(cx - size / 2, y - size, size, size);
-    gfx.strokeCircle(cx, y - size - size * 0.4, size * 0.4);
+    gfx.fillCircle(cx, baseY - size - headR, headR);
+    // Subtle shading
+    gfx.fillStyle(0x000000, 0.15);
+    gfx.fillRect(cx + size / 4, baseY - size, size / 4, size);
+    // Outline
+    gfx.lineStyle(2, 0x000000, 0.5);
+    gfx.strokeRect(cx - size / 2, baseY - size, size, size);
+    gfx.strokeCircle(cx, baseY - size - headR, headR);
     return gfx;
   }
 }
