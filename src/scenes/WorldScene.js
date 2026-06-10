@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import InteractionSystem from '../systems/InteractionSystem.js';
 import DialogBox from '../ui/DialogBox.js';
+import ENTITIES from '../data/entities.json';
 
 const DEBUG_PROXIMITY = true;
 
@@ -220,7 +221,7 @@ export default class WorldScene extends Phaser.Scene {
 
     // Interaction system
     this.interactionSystem = new InteractionSystem(this);
-    this.interactionSystem.loadFromMap(map);
+    this.interactionSystem.setEntities(ENTITIES);
 
     this.dialogBox = new DialogBox(this);
 
@@ -232,6 +233,20 @@ export default class WorldScene extends Phaser.Scene {
     if (DEBUG_PROXIMITY) {
       this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);
     }
+
+    this._sparkle = this.add.text(0, 0, '★', {
+      fontFamily: '"Press Start 2P"', fontSize: '10px',
+      color: '#ffffff', resolution: 2,
+    }).setOrigin(0.5, 1).setDepth(51).setAlpha(0);
+
+    this.tweens.add({
+      targets: this._sparkle,
+      y: '-=6',
+      duration: 500,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
 
     this._joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
     if (this.sys.game.device.input.touch) {
@@ -341,8 +356,21 @@ export default class WorldScene extends Phaser.Scene {
     if (DEBUG_PROXIMITY && this._debugGfx) {
       this._debugGfx.clear();
       if (near) {
-        this._debugGfx.lineStyle(2, 0xffff00, 0.8);
-        this._debugGfx.strokeCircle(near.x, near.y, 16);
+        this._debugGfx.lineStyle(2, 0xffff00, 0.4);
+        this._debugGfx.strokeCircle(near.x, near.y, 48);
+      }
+    }
+
+    // Sparkle indicator — bobs above nearest in-range entity
+    if (this._sparkle) {
+      if (near) {
+        const TYPE_COLOR = { npc: '#44ccff', object: '#ff9944', sign: '#88ff88' };
+        this._sparkle
+          .setPosition(near.x, near.y - 20)
+          .setColor(TYPE_COLOR[near.type] ?? '#ffffff')
+          .setAlpha(1);
+      } else {
+        this._sparkle.setAlpha(0);
       }
     }
 
