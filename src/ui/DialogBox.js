@@ -31,8 +31,13 @@ export default class DialogBox {
     ).setScrollFactor(0).setDepth(DEPTH + 2).setOrigin(0, 0)
      .setInteractive()
      .on('pointerdown', () => {
-       if (this.visible && this._entity) {
+       if (!this.visible || !this._entity) return;
+       if (this._entity.type === 'object') {
          scene.events.emit('interact', this._entity);
+       } else {
+         const entity = this._entity;
+         this.hide();
+         scene.events.emit('dialogClosed', entity);
        }
      });
 
