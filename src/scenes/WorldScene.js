@@ -249,7 +249,7 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     this._sparkle = this.add.text(0, 0, '★', {
-      fontFamily: 'Silkscreen', fontSize: '12px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#ffffff', resolution: 2,
     }).setOrigin(0.5, 1).setDepth(51).setAlpha(0);
 
@@ -279,7 +279,7 @@ export default class WorldScene extends Phaser.Scene {
 
       const label = this.add.text(entity.x, entity.y - 20, entity.name, {
         fontFamily: 'Silkscreen',
-        fontSize: '10px',
+        fontSize: '15px',
         color: '#' + color.toString(16).padStart(6, '0'),
         resolution: 2,
         backgroundColor: '#000000cc',

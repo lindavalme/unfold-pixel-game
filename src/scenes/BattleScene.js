@@ -106,13 +106,13 @@ export default class BattleScene extends Phaser.Scene {
     dlg.strokeRect(5, dlgY + 5, width - 10, dialogH - 10);
 
     this._dialogText = this.add.text(20, dlgY + 18, '', {
-      fontFamily: SILK, fontSize: '14px',
+      fontFamily: SILK, fontSize: '15px',
       color: WHITE, wordWrap: { width: width - 44 },
       lineSpacing: 6, resolution: 2,
     }).setDepth(10);
 
     this._prompt = this.add.text(width - 18, dlgY + dialogH - 16, '▶', {
-      fontFamily: PS2P, fontSize: '8px', color: WARM_S, resolution: 2,
+      fontFamily: PS2P, fontSize: '15px', color: WARM_S, resolution: 2,
     }).setOrigin(1, 1).setDepth(10).setAlpha(0);
 
     // ── Start sequence ────────────────────────────────────────────────
@@ -205,11 +205,11 @@ export default class BattleScene extends Phaser.Scene {
     gfx.strokeRect(x, y, w, 46);
 
     this.add.text(x + 8, y + 7, name, {
-      fontFamily: PS2P, fontSize: '7px', color: WARM_S, resolution: 2,
+      fontFamily: PS2P, fontSize: '15px', color: WARM_S, resolution: 2,
     }).setDepth(5);
 
     this.add.text(x + 8, y + 26, 'HP', {
-      fontFamily: PS2P, fontSize: '6px', color: DIM, resolution: 2,
+      fontFamily: PS2P, fontSize: '15px', color: DIM, resolution: 2,
     }).setDepth(5);
 
     const trackX = x + 28, trackY = y + 28, trackW = w - 38, trackH = 8;

@@ -41,18 +41,18 @@ export default class DialogBox {
       .setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._nameText = scene.add.text(0, 0, '', {
-      fontFamily: 'Silkscreen', fontSize: '12px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#ffffff', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._bodyText = scene.add.text(0, 0, '', {
-      fontFamily: 'Silkscreen', fontSize: '11px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#ffffff', wordWrap: { width: width - (PAD + BORDER + 8) * 2 },
       lineSpacing: 6, resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
     this._actionText = scene.add.text(0, 0, '', {
-      fontFamily: 'Silkscreen', fontSize: '10px',
+      fontFamily: 'Silkscreen', fontSize: '15px',
       color: '#aaaaaa', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
 
@@ -61,7 +61,7 @@ export default class DialogBox {
       width - PAD - BORDER - 6,
       height - PAD - BORDER - 6,
       '▶ tap',
-      { fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#f7c948', resolution: 2 }
+      { fontFamily: '"Press Start 2P"', fontSize: '15px', color: '#f7c948', resolution: 2 }
     ).setOrigin(1, 1).setScrollFactor(0).setDepth(DEPTH + 2).setAlpha(0);
   }
 
