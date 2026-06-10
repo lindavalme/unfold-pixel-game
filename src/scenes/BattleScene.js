@@ -213,13 +213,14 @@ export default class BattleScene extends Phaser.Scene {
       const txt = this.add.text(28, by + btnH / 2, `▸ ${label}`, {
         fontFamily: 'Silkscreen', fontSize: '15px',
         color: '#ffffff', resolution: 2,
-      }).setOrigin(0, 0.5).setDepth(13).setInteractive({ useHandCursor: true });
+      }).setOrigin(0, 0.5).setDepth(13);
 
-      txt.on('pointerover', () => { txt.setColor('#f7c948'); bg.lineStyle(2, 0xf7c948, 1); bg.strokeRect(16, by, btnW, btnH); });
-      txt.on('pointerout',  () => { txt.setColor('#ffffff'); bg.lineStyle(1, 0xf7c948, 0.5); bg.strokeRect(16, by, btnW, btnH); });
-      txt.once('pointerdown', () => this._onPlayerMove(move, btns));
+      const zone = this.add.zone(16, by, btnW, btnH).setOrigin(0, 0).setDepth(14).setInteractive({ useHandCursor: true });
+      zone.on('pointerover', () => { txt.setColor('#f7c948'); bg.lineStyle(2, 0xf7c948, 1); bg.strokeRect(16, by, btnW, btnH); });
+      zone.on('pointerout',  () => { txt.setColor('#ffffff'); bg.lineStyle(1, 0xf7c948, 0.5); bg.strokeRect(16, by, btnW, btnH); });
+      zone.once('pointerdown', () => this._onPlayerMove(move, btns));
 
-      btns.push(bg, txt);
+      btns.push(bg, txt, zone);
     });
   }
 
