@@ -106,7 +106,7 @@ export default class BattleScene extends Phaser.Scene {
     dlg.strokeRect(5, dlgY + 5, width - 10, dialogH - 10);
 
     this._dialogText = this.add.text(20, dlgY + 18, '', {
-      fontFamily: SILK, fontSize: '15px',
+      fontFamily: SILK, fontSize: '17px',
       color: WHITE, wordWrap: { width: width - 44 },
       lineSpacing: 6, resolution: 2,
     }).setDepth(10);
@@ -211,7 +211,7 @@ export default class BattleScene extends Phaser.Scene {
       bg.strokeRect(16, by, btnW, btnH);
 
       const txt = this.add.text(28, by + btnH / 2, `▸ ${label}`, {
-        fontFamily: 'Silkscreen', fontSize: '15px',
+        fontFamily: 'Silkscreen', fontSize: '17px',
         color: '#ffffff', resolution: 2,
       }).setOrigin(0, 0.5).setDepth(13);
 
