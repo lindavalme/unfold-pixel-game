@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import BootScene from './scenes/BootScene.js';
+import IntroScene from './scenes/IntroScene.js';
 import WorldScene from './scenes/WorldScene.js';
 
 new Phaser.Game({
@@ -17,5 +18,5 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, WorldScene],
+  scene: [BootScene, IntroScene, WorldScene],
 });
