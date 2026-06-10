@@ -42,7 +42,7 @@ export default class BattleScene extends Phaser.Scene {
   }
 
   _buildArena(width, height) {
-    const dialogH = 120;
+    const dialogH = 168;
     const arenaH  = height - dialogH;
 
     this.cameras.main.setBackgroundColor(0x0d0d1a);
@@ -189,15 +189,15 @@ export default class BattleScene extends Phaser.Scene {
   _showPlayerMoves() {
     const { width, height } = this.scale;
     const { player_moves = [] } = this._config;
-    const dialogH = 120;
+    const dialogH = 168;
     const dlgY    = height - dialogH;
 
     this._dialogText.setText('What will you do?');
     this._prompt.setAlpha(0);
 
     const btnW   = width - 32;
-    const btnH   = 34;
-    const startY = dlgY + 16;
+    const btnH   = 48;
+    const startY = dlgY + 8;
     const btns   = [];
 
     player_moves.forEach((move, i) => {
