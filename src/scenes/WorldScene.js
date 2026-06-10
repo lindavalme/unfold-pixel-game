@@ -3,7 +3,7 @@ import InteractionSystem from '../systems/InteractionSystem.js';
 import DialogBox from '../ui/DialogBox.js';
 import ENTITIES from '../data/entities.json';
 
-const DEBUG_PROXIMITY = true;
+const DEBUG_PROXIMITY = typeof __DEV__ !== 'undefined' && __DEV__;
 
 const TILESET_NAMES = [
   'Generic_Home_1_Layer_1_32x32',
@@ -173,15 +173,20 @@ export default class WorldScene extends Phaser.Scene {
     this.player.play('idle-down');
 
     this.cursors = this.input.keyboard.addKeys({
-      up:    Phaser.Input.Keyboard.KeyCodes.UP,
-      down:  Phaser.Input.Keyboard.KeyCodes.DOWN,
-      left:  Phaser.Input.Keyboard.KeyCodes.LEFT,
-      right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
-      w:     Phaser.Input.Keyboard.KeyCodes.W,
-      s:     Phaser.Input.Keyboard.KeyCodes.S,
-      a:     Phaser.Input.Keyboard.KeyCodes.A,
-      d:     Phaser.Input.Keyboard.KeyCodes.D,
+      up:      Phaser.Input.Keyboard.KeyCodes.UP,
+      down:    Phaser.Input.Keyboard.KeyCodes.DOWN,
+      left:    Phaser.Input.Keyboard.KeyCodes.LEFT,
+      right:   Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      w:       Phaser.Input.Keyboard.KeyCodes.W,
+      s:       Phaser.Input.Keyboard.KeyCodes.S,
+      a:       Phaser.Input.Keyboard.KeyCodes.A,
+      d:       Phaser.Input.Keyboard.KeyCodes.D,
+      interact: Phaser.Input.Keyboard.KeyCodes.E,
+      space:    Phaser.Input.Keyboard.KeyCodes.SPACE,
     });
+
+    this.input.keyboard.on('keydown-E',     () => this._triggerInteract());
+    this.input.keyboard.on('keydown-SPACE', () => this._triggerInteract());
 
     // --- Player diagnostic ---
     console.log('[WorldScene] ── Player diagnostics ──────────────────────');
@@ -227,8 +232,9 @@ export default class WorldScene extends Phaser.Scene {
 
     this.events.on('proximityEnter', (entity) => this.dialogBox.show(entity));
     this.events.on('proximityLeave', ()       => this.dialogBox.hide());
+    this.events.on('interact',       (entity) => this.dialogBox.show(entity));
 
-    this._drawEntityMarkers();
+    if (DEBUG_PROXIMITY) this._drawEntityMarkers();
 
     if (DEBUG_PROXIMITY) {
       this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);
@@ -244,6 +250,11 @@ export default class WorldScene extends Phaser.Scene {
     if (this.sys.game.device.input.touch) {
       this._createJoystick();
     }
+  }
+
+  _triggerInteract() {
+    const near = this.interactionSystem?._near;
+    if (near) this.events.emit('interact', near);
   }
 
   _drawEntityMarkers() {
