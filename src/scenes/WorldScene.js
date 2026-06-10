@@ -232,7 +232,15 @@ export default class WorldScene extends Phaser.Scene {
 
     this.events.on('proximityEnter', (entity) => this.dialogBox.show(entity));
     this.events.on('proximityLeave', ()       => this.dialogBox.hide());
-    this.events.on('interact',       (entity) => this.dialogBox.show(entity));
+    this.events.on('interact', (entity) => {
+      if (entity.minigame?.type === 'battle') {
+        this.dialogBox.hide(false);
+        this.scene.launch('BattleScene', { config: entity.minigame });
+        this.scene.pause();
+      } else {
+        this.dialogBox.show(entity);
+      }
+    });
 
     if (DEBUG_PROXIMITY) this._drawEntityMarkers();
 

@@ -23,7 +23,17 @@
     "x": 368,
     "y": 304,
     "action": "open",
-    "minigame": "trivia",
-    "dialog": "A box filled with memories..."
+    "dialog": "A box filled with memories...",
+    "minigame": {
+      "type": "battle",
+      "opponent_name": "Lila",
+      "opponent_sprite": null,
+      "moves": [
+        { "name": "Cuteness Overload", "flavor": "It's super effective!" },
+        { "name": "Tiny Hug",          "flavor": "Player can't move!" },
+        { "name": "Puppy Eyes",        "flavor": "You feel your heart melting..." }
+      ],
+      "outcome_message": "You blacked out... but you're smiling."
+    }
   }
 ]
