@@ -290,8 +290,8 @@ export default class WorldScene extends Phaser.Scene {
     drawThumb(baseX, baseY);
 
     this.input.on('pointerdown', (ptr) => {
-      // Only claim touches that start in the left third of the screen
-      if (ptr.x > this.scale.width / 3) return;
+      // Ignore touches that start on the right edge (reserved for future UI buttons)
+      if (ptr.x > this.scale.width - 48) return;
       this._joystick.active = true;
       this._joystick.baseX  = ptr.x;
       this._joystick.baseY  = ptr.y;
