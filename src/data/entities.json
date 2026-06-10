@@ -33,7 +33,14 @@
         { "name": "Poopy Diaper",      "flavor": "A direct hit! You can't escape!" },
         { "name": "Cuteness Overload", "flavor": "It's super effective!" }
       ],
-      "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation."
+      "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation.",
+      "partner": "Dad",
+      "distraction": "Cocomelon",
+      "player_moves": [
+        { "name": "Tag in {partner}",      "flavor": "{partner} stumbles in half asleep... barely helped." },
+        { "name": "Turn on {distraction}", "flavor": "{distraction} deployed! Alina paused for 3 seconds." },
+        { "name": "Cry",                   "flavor": "You cried. It felt right. Nothing changed." }
+      ]
     }
   }
 ]

@@ -129,17 +129,27 @@ export default class BattleScene extends Phaser.Scene {
 
   // ── Sequence ─────────────────────────────────────────────────────────
 
+  _resolve(str) {
+    const { partner = 'Partner', distraction = 'TV' } = this._config;
+    return str.replace(/{partner}/g, partner).replace(/{distraction}/g, distraction);
+  }
+
   _buildSequence() {
-    const { opponent_name, moves, outcome_message } = this._config;
+    const { opponent_name, moves, outcome_message, player_moves = [] } = this._config;
     const beats = [];
-    beats.push({ type: 'text',  text: `A wild ${opponent_name} appeared!` });
-    beats.push({ type: 'text',  text: `Go! You!` });
+    beats.push({ type: 'text', text: `A wild ${opponent_name} appeared!` });
+    beats.push({ type: 'text', text: `Go! You!` });
+
     const step = 1 / moves.length;
     for (const move of moves) {
-      beats.push({ type: 'text',  text: `${opponent_name} used\n${move.name}!` });
-      beats.push({ type: 'text',  text: move.flavor });
-      beats.push({ type: 'drain', amount: step });
+      beats.push({ type: 'text',        text: `${opponent_name} used\n${move.name}!` });
+      beats.push({ type: 'text',        text: move.flavor });
+      beats.push({ type: 'drain',       amount: step });
+      if (player_moves.length > 0) {
+        beats.push({ type: 'player-turn' });
+      }
     }
+
     beats.push({ type: 'text',  text: `You fainted!` });
     beats.push({ type: 'shake' });
     beats.push({ type: 'text',  text: outcome_message });
@@ -151,7 +161,8 @@ export default class BattleScene extends Phaser.Scene {
     if (this._seqIndex >= this._sequence.length) return;
     const beat = this._sequence[this._seqIndex++];
     if      (beat.type === 'text')  this._showText(beat.text, () => this._waitForTap());
-    else if (beat.type === 'drain') this._drainHP(this._plrHP, beat.amount, () => this.time.delayedCall(300, () => this._nextBeat()));
+    else if (beat.type === 'drain')       this._drainHP(this._plrHP, beat.amount, () => this.time.delayedCall(300, () => this._nextBeat()));
+    else if (beat.type === 'player-turn') this._showPlayerMoves();
     else if (beat.type === 'shake') { this.cameras.main.shake(500, 0.014); this.time.delayedCall(600, () => this._nextBeat()); }
     else if (beat.type === 'end')   this.time.delayedCall(700, () => this._endBattle());
   }
@@ -173,6 +184,55 @@ export default class BattleScene extends Phaser.Scene {
     this.tweens.killTweensOf(this._prompt);
     this._prompt.setAlpha(0);
     this._nextBeat();
+  }
+
+  _showPlayerMoves() {
+    const { width, height } = this.scale;
+    const { player_moves = [] } = this._config;
+    const dialogH = 120;
+    const dlgY    = height - dialogH;
+
+    this._dialogText.setText('What will you do?');
+    this._prompt.setAlpha(0);
+
+    const btnW   = width - 32;
+    const btnH   = 26;
+    const startY = dlgY + 34;
+    const btns   = [];
+
+    player_moves.forEach((move, i) => {
+      const label = this._resolve(move.name);
+      const by    = startY + i * (btnH + 6);
+
+      const bg = this.add.graphics().setDepth(12);
+      bg.fillStyle(0x1a1a3a, 1);
+      bg.fillRect(16, by, btnW, btnH);
+      bg.lineStyle(1, 0xf7c948, 0.5);
+      bg.strokeRect(16, by, btnW, btnH);
+
+      const txt = this.add.text(28, by + btnH / 2, `▸ ${label}`, {
+        fontFamily: 'Silkscreen', fontSize: '15px',
+        color: '#ffffff', resolution: 2,
+      }).setOrigin(0, 0.5).setDepth(13).setInteractive({ useHandCursor: true });
+
+      txt.on('pointerover', () => { txt.setColor('#f7c948'); bg.lineStyle(2, 0xf7c948, 1); bg.strokeRect(16, by, btnW, btnH); });
+      txt.on('pointerout',  () => { txt.setColor('#ffffff'); bg.lineStyle(1, 0xf7c948, 0.5); bg.strokeRect(16, by, btnW, btnH); });
+      txt.once('pointerdown', () => this._onPlayerMove(move, btns));
+
+      btns.push(bg, txt);
+    });
+  }
+
+  _onPlayerMove(move, btns) {
+    // Destroy buttons
+    btns.forEach(b => b.destroy());
+
+    const flavor = this._resolve(move.flavor);
+    this._showText(flavor, () => this._waitForTap());
+
+    // Player does tiny damage to opponent (6-9% per move — never lethal)
+    const dmg = Phaser.Math.FloatBetween(0.06, 0.09);
+    this._drainHP(this._oppHP, dmg, () => {});
   }
 
   _endBattle() {
