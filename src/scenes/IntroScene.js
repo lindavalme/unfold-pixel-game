@@ -26,13 +26,13 @@ export default class IntroScene extends Phaser.Scene {
 
     // "for [recipient]" label
     this.add.text(cx, 60, `for ${HOME.recipient}`, {
-      fontFamily: '"Press Start 2P"', fontSize: '8px',
+      fontFamily: '"Press Start 2P"', fontSize: '10px',
       color: DIM, resolution: 2,
     }).setOrigin(0.5);
 
     // Title
     this.add.text(cx, 100, HOME.title, {
-      fontFamily: '"Press Start 2P"', fontSize: '12px',
+      fontFamily: '"Press Start 2P"', fontSize: '16px',
       color: WARM, resolution: 2,
       wordWrap: { width: width - 64 }, align: 'center',
     }).setOrigin(0.5, 0);
@@ -40,13 +40,13 @@ export default class IntroScene extends Phaser.Scene {
     // Divider
     const div = this.add.graphics();
     div.lineStyle(1, 0xf7c948, 0.4);
-    div.lineBetween(cx - 80, 148, cx + 80, 148);
+    div.lineBetween(cx - 80, 160, cx + 80, 160);
 
     // Typewriter text
     this._fullText  = HOME.intro_text ?? '';
     this._charIndex = 0;
-    this._textObj   = this.add.text(cx, 172, '', {
-      fontFamily: '"Press Start 2P"', fontSize: '7px',
+    this._textObj   = this.add.text(cx, 180, '', {
+      fontFamily: '"Press Start 2P"', fontSize: '10px',
       color: WHITE, resolution: 2,
       wordWrap: { width: width - 80 }, align: 'center', lineSpacing: 10,
     }).setOrigin(0.5, 0);
@@ -60,7 +60,7 @@ export default class IntroScene extends Phaser.Scene {
 
     // "Tap to begin" prompt — hidden until typing finishes
     this._prompt = this.add.text(cx, height - 40, '▶  tap to begin', {
-      fontFamily: '"Press Start 2P"', fontSize: '8px',
+      fontFamily: '"Press Start 2P"', fontSize: '10px',
       color: WARM, resolution: 2,
     }).setOrigin(0.5).setAlpha(0);
 
