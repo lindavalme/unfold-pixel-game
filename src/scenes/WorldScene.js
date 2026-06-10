@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import InteractionSystem from '../systems/InteractionSystem.js';
 import DialogBox from '../ui/DialogBox.js';
 import ToastMessage from '../ui/ToastMessage.js';
+import OnboardingOverlay from '../ui/OnboardingOverlay.js';
 import ENTITIES from '../data/entities.json';
 
 const DEBUG_PROXIMITY = typeof __DEV__ !== 'undefined' && __DEV__;
@@ -261,6 +262,8 @@ export default class WorldScene extends Phaser.Scene {
     if (this.sys.game.device.input.touch) {
       this._createJoystick();
     }
+
+    new OnboardingOverlay(this);
   }
 
   _triggerInteract() {
