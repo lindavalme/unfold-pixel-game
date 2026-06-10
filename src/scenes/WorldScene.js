@@ -258,11 +258,13 @@ export default class WorldScene extends Phaser.Scene {
       gfx.fillStyle(color, 0.3);
       gfx.fillCircle(entity.x, entity.y, 12);
 
-      this.add.text(entity.x, entity.y - 20, entity.name, {
+      const label = this.add.text(entity.x, entity.y - 20, entity.name, {
         fontFamily: 'Silkscreen',
         fontSize: '10px',
         color: '#' + color.toString(16).padStart(6, '0'),
         resolution: 2,
+        backgroundColor: '#000000cc',
+        padding: { x: 4, y: 2 },
       }).setOrigin(0.5, 1).setDepth(49);
     }
   }
