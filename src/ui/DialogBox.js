@@ -14,6 +14,7 @@ export default class DialogBox {
   constructor(scene) {
     this.scene   = scene;
     this.visible = false;
+    this._entity = null;
 
     const { width, height } = scene.scale;
     this._w = width;
@@ -21,6 +22,19 @@ export default class DialogBox {
 
     this._bg = scene.add.graphics()
       .setScrollFactor(0).setDepth(DEPTH).setAlpha(0);
+
+    // Tap zone over the dialog area — fires 'interact' on mobile
+    this._tapZone = scene.add.rectangle(
+      0, height - BOX_HEIGHT - PAD,
+      width, BOX_HEIGHT + PAD,
+      0x000000, 0
+    ).setScrollFactor(0).setDepth(DEPTH + 2).setOrigin(0, 0)
+     .setInteractive()
+     .on('pointerdown', () => {
+       if (this.visible && this._entity) {
+         scene.events.emit('interact', this._entity);
+       }
+     });
 
     // Portrait placeholder (NPC only)
     this._portrait = scene.add.graphics()
@@ -45,6 +59,7 @@ export default class DialogBox {
 
   show(entity) {
     if (this.visible) this.hide(false);
+    this._entity = entity;
 
     const style  = TYPE_STYLE[entity.type] ?? DEFAULT_STYLE;
     const w      = this._w;
@@ -108,6 +123,7 @@ export default class DialogBox {
 
   hide(animate = true) {
     if (!this.visible) return;
+    this._entity = null;
     const targets = [this._bg, this._nameText, this._bodyText, this._actionText, this._portrait];
     if (animate) {
       this.scene.tweens.add({ targets, alpha: 0, duration: 100, ease: 'Linear' });
