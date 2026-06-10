@@ -242,7 +242,7 @@ export default class WorldScene extends Phaser.Scene {
       }
     });
 
-    if (DEBUG_PROXIMITY) this._drawEntityMarkers();
+    this._drawEntityMarkers();
 
     if (DEBUG_PROXIMITY) {
       this._debugGfx = this.add.graphics().setDepth(50).setScrollFactor(1);

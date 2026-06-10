@@ -55,6 +55,14 @@ export default class DialogBox {
       fontFamily: 'Silkscreen', fontSize: '10px',
       color: '#aaaaaa', resolution: 2,
     }).setScrollFactor(0).setDepth(DEPTH + 1).setAlpha(0);
+
+    // Pulsing tap indicator bottom-right corner of dialog
+    this._tapHint = scene.add.text(
+      width - PAD - BORDER - 6,
+      height - PAD - BORDER - 6,
+      '▶ tap',
+      { fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#f7c948', resolution: 2 }
+    ).setOrigin(1, 1).setScrollFactor(0).setDepth(DEPTH + 2).setAlpha(0);
   }
 
   show(entity) {
@@ -118,12 +126,23 @@ export default class DialogBox {
 
     const targets = [bg, this._nameText, this._bodyText, this._actionText, portrait];
     this.scene.tweens.add({ targets, alpha: 1, duration: 120, ease: 'Linear' });
+
+    // Pulse tap hint
+    this.scene.tweens.killTweensOf(this._tapHint);
+    this._tapHint.setAlpha(1);
+    this.scene.tweens.add({
+      targets: this._tapHint, alpha: 0.25, duration: 600,
+      ease: 'Sine.easeInOut', yoyo: true, repeat: -1,
+    });
+
     this.visible = true;
   }
 
   hide(animate = true) {
     if (!this.visible) return;
     this._entity = null;
+    this.scene.tweens.killTweensOf(this._tapHint);
+    this._tapHint.setAlpha(0);
     const targets = [this._bg, this._nameText, this._bodyText, this._actionText, this._portrait];
     if (animate) {
       this.scene.tweens.add({ targets, alpha: 0, duration: 100, ease: 'Linear' });
