@@ -29,9 +29,9 @@
       "opponent_name": "Alina",
       "opponent_sprite": null,
       "moves": [
-        { "name": "Cuteness Overload", "flavor": "It's super effective!" },
+        { "name": "Hunger Cry",        "flavor": "It's 3am. You can't think straight!" },
         { "name": "Poopy Diaper",      "flavor": "A direct hit! You can't escape!" },
-        { "name": "Puppy Eyes",        "flavor": "You feel your heart melting..." }
+        { "name": "Cuteness Overload", "flavor": "It's super effective!" }
       ],
       "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation."
     }
