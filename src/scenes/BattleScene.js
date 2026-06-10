@@ -150,7 +150,7 @@ export default class BattleScene extends Phaser.Scene {
       }
     }
 
-    beats.push({ type: 'text',    text: `You fainted!` });
+    beats.push({ type: 'text',    text: `You KO'd!` });
     beats.push({ type: 'drain-rest' }); // drain the remaining sliver to zero
     beats.push({ type: 'shake' });
     beats.push({ type: 'text',  text: outcome_message });
