@@ -26,7 +26,7 @@
     "dialog": "A box filled with memories...",
     "minigame": {
       "type": "battle",
-      "opponent_name": "Alina",
+      "opponent_name": "Maya",
       "opponent_sprite": null,
       "moves": [
         { "name": "Hunger Cry",        "flavor": "It's 3am. You can't think straight!" },
