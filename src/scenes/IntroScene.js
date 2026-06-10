@@ -46,9 +46,9 @@ export default class IntroScene extends Phaser.Scene {
     this._fullText  = HOME.intro_text ?? '';
     this._charIndex = 0;
     this._textObj   = this.add.text(cx, 180, '', {
-      fontFamily: '"Press Start 2P"', fontSize: '10px',
+      fontFamily: 'VT323', fontSize: '22px',
       color: WHITE, resolution: 2,
-      wordWrap: { width: width - 80 }, align: 'center', lineSpacing: 10,
+      wordWrap: { width: width - 80 }, align: 'center', lineSpacing: 6,
     }).setOrigin(0.5, 0);
 
     this._typeTimer = this.time.addEvent({
