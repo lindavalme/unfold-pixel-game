@@ -45,9 +45,13 @@ public/assets/
 
 | Intent | Say to Claude | Command run |
 |---|---|---|
-| Test a change | "deploy for testing" | `vercel` → preview URL |
+| Test a change | "deploy for testing" | `vercel` → per-deploy preview URL + branch URL |
 | Ship to production | "deploy to prod" | `git push origin main` + `vercel --prod` |
 | Save progress only | "commit this" | commit + push branch, no deploy |
+
+**Two types of preview URLs:**
+- **Per-deploy** `unfold-<hash>-lindavalmes-projects.vercel.app` — snapshot of one specific deploy, never changes
+- **Branch** `unfold-git-<branch-name>-lindavalmes-projects.vercel.app` — always reflects latest push to that branch, good for sharing
 
 **Rules:**
 - `main` = production (https://unfold-kappa.vercel.app)
