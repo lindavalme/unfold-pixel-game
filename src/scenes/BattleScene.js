@@ -200,34 +200,70 @@ export default class BattleScene extends Phaser.Scene {
     const btnW   = width - 32;
     const btnH   = 48;
     const startY = dlgY + 8;
-    const btns   = [];
+
+    // Each entry: { bg, txt, zone, move, by }
+    const btns = [];
+    let focusIndex = 0;
+
+    const redraw = (index, focused) => {
+      const b = btns[index];
+      if (!b) return;
+      b.bg.clear();
+      b.bg.fillStyle(focused ? 0x2a2a5a : 0x1a1a3a, 1);
+      b.bg.fillRect(16, b.by, btnW, btnH);
+      b.bg.lineStyle(focused ? 2 : 1, 0xf7c948, focused ? 1 : 0.5);
+      b.bg.strokeRect(16, b.by, btnW, btnH);
+      b.txt.setColor(focused ? '#f7c948' : '#ffffff');
+      b.txt.setText(`${focused ? '▶' : '▸'} ${this._resolve(b.move.name)}`);
+    };
+
+    const moveFocus = (delta) => {
+      redraw(focusIndex, false);
+      focusIndex = Phaser.Math.Wrap(focusIndex + delta, 0, btns.length);
+      redraw(focusIndex, true);
+    };
+
+    const selectFocused = () => {
+      cleanup();
+      this._onPlayerMove(btns[focusIndex].move, btns.map(b => [b.bg, b.txt, b.zone]).flat());
+    };
+
+    const onUp    = () => moveFocus(-1);
+    const onDown  = () => moveFocus(1);
+    const onConfirm = () => selectFocused();
+
+    const cleanup = () => {
+      this.input.keyboard.off('keydown-UP',    onUp);
+      this.input.keyboard.off('keydown-DOWN',  onDown);
+      this.input.keyboard.off('keydown-SPACE', onConfirm);
+      this.input.keyboard.off('keydown-ENTER', onConfirm);
+    };
 
     player_moves.forEach((move, i) => {
-      const label = this._resolve(move.name);
-      const by    = startY + i * (btnH + 6);
-
-      const bg = this.add.graphics().setDepth(12);
-      bg.fillStyle(0x1a1a3a, 1);
-      bg.fillRect(16, by, btnW, btnH);
-      bg.lineStyle(1, 0xf7c948, 0.5);
-      bg.strokeRect(16, by, btnW, btnH);
-
-      const txt = this.add.text(28, by + btnH / 2, `▸ ${label}`, {
+      const by  = startY + i * (btnH + 6);
+      const bg  = this.add.graphics().setDepth(12);
+      const txt = this.add.text(28, by + btnH / 2, '', {
         fontFamily: 'Silkscreen', fontSize: '17px',
         color: '#ffffff', resolution: 2,
       }).setOrigin(0, 0.5).setDepth(13);
 
       const zone = this.add.zone(16, by, btnW, btnH).setOrigin(0, 0).setDepth(14).setInteractive({ useHandCursor: true });
-      zone.on('pointerover', () => { txt.setColor('#f7c948'); bg.lineStyle(2, 0xf7c948, 1); bg.strokeRect(16, by, btnW, btnH); });
-      zone.on('pointerout',  () => { txt.setColor('#ffffff'); bg.lineStyle(1, 0xf7c948, 0.5); bg.strokeRect(16, by, btnW, btnH); });
-      zone.once('pointerdown', () => this._onPlayerMove(move, btns));
+      zone.on('pointerover', () => { redraw(focusIndex, false); focusIndex = i; redraw(i, true); });
+      zone.once('pointerdown', () => { cleanup(); this._onPlayerMove(move, btns.map(b => [b.bg, b.txt, b.zone]).flat()); });
 
-      btns.push(bg, txt, zone);
+      btns.push({ bg, txt, zone, move, by });
     });
+
+    // Draw initial state
+    btns.forEach((_, i) => redraw(i, i === 0));
+
+    this.input.keyboard.on('keydown-UP',    onUp);
+    this.input.keyboard.on('keydown-DOWN',  onDown);
+    this.input.keyboard.on('keydown-SPACE', onConfirm);
+    this.input.keyboard.on('keydown-ENTER', onConfirm);
   }
 
   _onPlayerMove(move, btns) {
-    // Destroy buttons
     btns.forEach(b => b.destroy());
 
     const flavor = this._resolve(move.flavor);

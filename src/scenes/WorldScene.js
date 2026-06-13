@@ -187,7 +187,6 @@ export default class WorldScene extends Phaser.Scene {
       space:    Phaser.Input.Keyboard.KeyCodes.SPACE,
     });
 
-    this.input.keyboard.on('keydown-E',     () => this._triggerInteract());
     this.input.keyboard.on('keydown-SPACE', () => this._triggerInteract());
 
     // --- Player diagnostic ---
