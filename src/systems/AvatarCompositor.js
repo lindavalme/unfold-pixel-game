@@ -10,6 +10,12 @@ const BODY_TINT_MAP = {
   '10': { baseBody: '02', tint: 0x6B4C35 }, // rich brown / melanated
 };
 
+// Hair color tints: applied when the source sheet reads as the wrong hue.
+// Color '07' ships as dark blue-gray — tint to neutral near-black instead.
+const HAIR_TINT_MAP = {
+  '07': 0x3A3A3A,
+};
+
 /**
  * Returns the texture keys and load paths for each avatar layer.
  */
@@ -112,6 +118,12 @@ export function composeAvatar(scene, config, x, y, startFrame) {
   if (tint) {
     sprites[0].setTint(tint);
     sprites[1].setTint(tint);
+  }
+
+  // Apply hair color correction tint — hair is at index 2 when present
+  if (config.hair !== '00') {
+    const hairTint = HAIR_TINT_MAP[config.hair_color];
+    if (hairTint) sprites[2].setTint(hairTint);
   }
 
   return { sprite: body, layers: sprites };
