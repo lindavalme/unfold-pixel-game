@@ -4,6 +4,10 @@ import DialogBox from '../ui/DialogBox.js';
 import ToastMessage from '../ui/ToastMessage.js';
 import OnboardingOverlay from '../ui/OnboardingOverlay.js';
 import ENTITIES from '../data/entities.json';
+import { preloadAvatar, composeAvatar, syncAvatarLayers, playAvatarAnim, getAvatarLayers, defaultAvatarConfig, validateAvatarConfig } from '../systems/AvatarCompositor.js';
+
+// Toggle to true once composed avatar frame ranges are confirmed
+const USE_COMPOSED_AVATAR = true;
 
 const DEBUG_PROXIMITY = typeof __DEV__ !== 'undefined' && __DEV__;
 
@@ -51,6 +55,12 @@ export default class WorldScene extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 64, // each character is 2 tile-rows tall (32×64px)
     });
+
+    if (USE_COMPOSED_AVATAR) {
+      const avatarConfig = validateAvatarConfig(defaultAvatarConfig());
+      preloadAvatar(this, avatarConfig);
+      this._avatarConfig = avatarConfig;
+    }
   }
 
   create() {
@@ -130,49 +140,64 @@ export default class WorldScene extends Phaser.Scene {
     // Direction index within each row: right=0, up=1, left=2, down=3
     // Frame = rowStart + dirIndex*6 + frameWithinCycle (0–5)
 
+    const compositeKey = USE_COMPOSED_AVATAR ? null : 'player';
+
     const FRAME_RANGES = {
       'idle-right': [56, 57, 58, 59, 60, 61],
       'idle-up':    [62, 63, 64, 65, 66, 67],
       'idle-left':  [68, 69, 70, 71, 72, 73],
-      'idle-down':  [74, 75, 76, 77, 78, 79],  // row 1, cols 18–23
+      'idle-down':  [74, 75, 76, 77, 78, 79],
       'walk-right': [112, 113, 114, 115, 116, 117],
       'walk-up':    [118, 119, 120, 121, 122, 123],
       'walk-left':  [124, 125, 126, 127, 128, 129],
-      'walk-down':  [130, 131, 132, 133, 134, 135], // row 2, cols 18–23
+      'walk-down':  [130, 131, 132, 133, 134, 135],
     };
 
-    // --- Spritesheet diagnostic ---
-    const playerTex = this.textures.get('player');
-    const playerSrc = playerTex.getSourceImage();
-    console.log(`[WorldScene] Player spritesheet: ${playerSrc.width}x${playerSrc.height}px → ${playerSrc.width/32} cols × ${playerSrc.height/64} rows (frameHeight=64)`);
-    console.log(`[WorldScene] Texture frame count: ${playerTex.frameTotal}  (expected: 1120)`);
-    console.log(`[WorldScene] Frame 74 exists: ${playerTex.has('74') || playerTex.has(74)}`);
-    for (const [key, frames] of Object.entries(FRAME_RANGES)) {
-      console.log(`  ${key}: frames ${frames[0]}–${frames[frames.length - 1]}`);
-    }
+    const IDLE_DOWN_START = 74;
 
-    for (const [key, frames] of Object.entries(FRAME_RANGES)) {
-      this.anims.create({
-        key,
-        frames: frames.map(f => ({ key: 'player', frame: f })),
-        frameRate: key.startsWith('walk') ? 8 : 4,
-        repeat: -1,
+    if (USE_COMPOSED_AVATAR) {
+      // 1. Create stacked sprites first so layer keys are available
+      this._avatar = composeAvatar(this, this._avatarConfig, playerX, playerY, IDLE_DOWN_START);
+      this.player = this._avatar.sprite;
+      const layerKeys = getAvatarLayers(this._avatarConfig).map(l => l.key);
+      this._avatarLayerKeys = layerKeys;
+
+      // 2. Register animations per layer texture key
+      for (const texKey of layerKeys) {
+        for (const [animKey, frames] of Object.entries(FRAME_RANGES)) {
+          const fullKey = `${animKey}__${texKey}`;
+          if (!this.anims.exists(fullKey)) {
+            this.anims.create({
+              key: fullKey,
+              frames: frames.map(f => ({ key: texKey, frame: f })),
+              frameRate: animKey.startsWith('walk') ? 8 : 4,
+              repeat: -1,
+            });
+          }
+        }
+      }
+
+      // 3. Play initial animation on all layers
+      this._avatar.layers.forEach((spr, i) => {
+        spr.play(`idle-down__${layerKeys[i]}`);
       });
+    } else {
+      for (const [key, frames] of Object.entries(FRAME_RANGES)) {
+        this.anims.create({
+          key,
+          frames: frames.map(f => ({ key: compositeKey, frame: f })),
+          frameRate: key.startsWith('walk') ? 8 : 4,
+          repeat: -1,
+        });
+      }
+      this.player = this.physics.add.sprite(playerX, playerY, compositeKey, IDLE_DOWN_START);
+      this.player.setOrigin(0.5, 0.5);
+      this.player.setDepth(8);
+      this.player.setScale(1);
+      this.player.body.setSize(16, 8).setOffset(8, 52);
+      this.player.body.setCollideWorldBounds(true);
+      this.player.play('idle-down');
     }
-
-    const IDLE_DOWN_START = 74; // row 1, col 18 — first frame of idle-down (LimeZu confirmed)
-    console.log(`[WorldScene] Setting idle frame to idle-down: ${IDLE_DOWN_START}`);
-
-    this.player = this.physics.add.sprite(playerX, playerY, 'player', IDLE_DOWN_START);
-    this.player.setOrigin(0.5, 0.5);
-    this.player.setDepth(8);
-    this.player.setScale(1);
-    // Sprite is 32×64px. With origin(0.5,0.5), feet sit at +32px below centre.
-    // Physics body is a slim foot-area box: 16×8px, offset so it sits at the feet.
-    // offsetX = (32-16)/2 = 8;  offsetY = (64-8)/2 = 28 (centre of 64 + 24 = bottom quarter)
-    this.player.body.setSize(16, 8).setOffset(8, 52);
-    this.player.body.setCollideWorldBounds(true);
-    this.player.play('idle-down');
 
     this.cursors = this.input.keyboard.addKeys({
       up:      Phaser.Input.Keyboard.KeyCodes.UP,
@@ -197,7 +222,7 @@ export default class WorldScene extends Phaser.Scene {
     console.log(`  visible        : ${this.player.visible},  alpha: ${this.player.alpha}`);
     console.log(`  active frame   : ${this.player.frame.name}  (expected: 74)`);
     console.log(`  displaySize    : ${this.player.displayWidth}x${this.player.displayHeight}px  (expected: 32x64)`);
-    const _ptex = this.textures.get('player');
+    const _ptex = this.textures.get(compositeKey);
     console.log(`  frame in tex   : has('74')=${_ptex.has('74')}, has(74)=${_ptex.has(74)}, frameTotal=${_ptex.frameTotal}`);
     console.log('[WorldScene] ── Camera diagnostics ─────────────────────');
     console.log(`  scroll         : (${this.cameras.main.scrollX.toFixed(1)}, ${this.cameras.main.scrollY.toFixed(1)})`);
@@ -298,7 +323,6 @@ export default class WorldScene extends Phaser.Scene {
     const THUMB_R  = 24;
     const MARGIN   = 80; // distance from bottom-left corner
 
-    const cam = this.cameras.main;
     const baseX = MARGIN;
     const baseY = this.scale.height - MARGIN;
 
@@ -434,8 +458,17 @@ export default class WorldScene extends Phaser.Scene {
     else if (goDown)    dir = 'down';
 
     const animKey = `${moving ? 'walk' : 'idle'}-${dir}`;
-    if (this.player.anims.currentAnim?.key !== animKey) {
-      this.player.play(animKey);
+
+    if (USE_COMPOSED_AVATAR && this._avatar) {
+      syncAvatarLayers(this._avatar);
+      this._avatar.layers.forEach((spr, i) => {
+        const fullKey = `${animKey}__${this._avatarLayerKeys[i]}`;
+        if (spr.anims.currentAnim?.key !== fullKey) spr.play(fullKey);
+      });
+    } else {
+      if (this.player.anims.currentAnim?.key !== animKey) {
+        this.player.play(animKey);
+      }
     }
 
     this._lastDir = dir;
