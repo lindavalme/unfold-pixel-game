@@ -130,6 +130,32 @@ export function composeAvatar(scene, config, x, y, startFrame) {
 }
 
 /**
+ * Creates display-only (non-physics) layered avatar sprites for UI/battle scenes.
+ * Returns a flat sprites[] array with the body sprite at index 0.
+ */
+export function buildAvatarDisplay(scene, config, x, y, startFrame, scale = 2, baseDepth = 3) {
+  const layerDefs = getAvatarLayers(config);
+  normaliseBodyFrames(scene, layerDefs[0].key);
+
+  const sprites = layerDefs.map(({ key }, i) =>
+    scene.add.sprite(x, y, key, startFrame)
+      .setOrigin(0.5, 1)
+      .setScale(scale)
+      .setDepth(baseDepth + i * 0.1)
+  );
+
+  const tint = BODY_TINT_MAP[config.body]?.tint;
+  if (tint) { sprites[0].setTint(tint); sprites[1].setTint(tint); }
+
+  if (config.hair !== '00') {
+    const hairTint = HAIR_TINT_MAP[config.hair_color];
+    if (hairTint) sprites[2].setTint(hairTint);
+  }
+
+  return sprites;
+}
+
+/**
  * Syncs overlay positions to match the body sprite. Call every update().
  */
 export function syncAvatarLayers(avatar) {

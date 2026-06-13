@@ -4,6 +4,7 @@ import DialogBox from '../ui/DialogBox.js';
 import ToastMessage from '../ui/ToastMessage.js';
 import OnboardingOverlay from '../ui/OnboardingOverlay.js';
 import ENTITIES from '../data/entities.json';
+import HOME from '../data/home.json';
 import { preloadAvatar, composeAvatar, syncAvatarLayers, playAvatarAnim, getAvatarLayers, defaultAvatarConfig, validateAvatarConfig } from '../systems/AvatarCompositor.js';
 
 // Toggle to true once composed avatar frame ranges are confirmed
@@ -263,7 +264,12 @@ export default class WorldScene extends Phaser.Scene {
     this.events.on('interact', (entity) => {
       if (entity.minigame?.type === 'battle') {
         this.dialogBox.hide(false);
-        this.scene.launch('BattleScene', { config: entity.minigame });
+        this.scene.launch('BattleScene', {
+          config: entity.minigame,
+          avatarConfig:    this._avatarConfig    ?? null,
+          avatarLayerKeys: this._avatarLayerKeys ?? null,
+          playerName:      HOME.recipient        ?? 'You',
+        });
         this.scene.pause();
       } else {
         this.dialogBox.show(entity);

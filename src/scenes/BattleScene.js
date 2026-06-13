@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { buildAvatarDisplay } from '../systems/AvatarCompositor.js';
 
 const PS2P    = '"Press Start 2P"';
 const SILK    = 'Silkscreen';
@@ -24,6 +25,9 @@ export default class BattleScene extends Phaser.Scene {
       ],
       outcome_message: 'You blacked out... overwhelmed with love.',
     };
+    this._avatarConfig    = data?.avatarConfig    ?? null;
+    this._avatarLayerKeys = data?.avatarLayerKeys ?? null;
+    this._playerName      = data?.playerName      ?? 'You';
   }
 
   create() {
@@ -73,11 +77,13 @@ export default class BattleScene extends Phaser.Scene {
     // ── Player platform (bottom-left) ────────────────────────────────
     const plrX = width * 0.28, plrPlatY = arenaH * 0.78;
     this._drawPlatform(plrX, plrPlatY, 130, 20, 0x1a3a2a);
-    this._plrSprite = this._drawChar(plrX, plrPlatY - 68, 44, 0x5090e0);
+    this._plrSprite = this._avatarConfig && this._avatarLayerKeys
+      ? this._buildAvatarDisplay(plrX, plrPlatY)
+      : this._drawChar(plrX, plrPlatY - 68, 44, 0x5090e0);
 
     // ── HP panels ────────────────────────────────────────────────────
     this._oppHP = this._buildHPPanel(16,          arenaH * 0.06, 180, this._config.opponent_name);
-    this._plrHP = this._buildHPPanel(width - 204, arenaH * 0.52, 188, 'YOU');
+    this._plrHP = this._buildHPPanel(width - 204, arenaH * 0.52, 188, this._playerName);
 
     // ── VS splash ─────────────────────────────────────────────────────
     const vs = this.add.text(width / 2, arenaH / 2, 'VS', {
@@ -138,7 +144,7 @@ export default class BattleScene extends Phaser.Scene {
     const { opponent_name, moves, outcome_message, player_moves = [] } = this._config;
     const beats = [];
     beats.push({ type: 'text', text: `A wild ${opponent_name} appeared!` });
-    beats.push({ type: 'text', text: `Go! You!` });
+    beats.push({ type: 'text', text: `Go! ${this._playerName}!` });
 
     const step = 0.88 / moves.length; // leave ~12% for the final blow
     for (const move of moves) {
@@ -377,6 +383,12 @@ export default class BattleScene extends Phaser.Scene {
     gfx.fillEllipse(cx, y, w, h);
     gfx.lineStyle(1, WARM, 0.2);
     gfx.strokeEllipse(cx, y, w, h);
+  }
+
+  _buildAvatarDisplay(cx, platY) {
+    const sprites = buildAvatarDisplay(this, this._avatarConfig, cx, platY, 62, 2, 3);
+    sprites.forEach((spr, i) => spr.play(`idle-up__${this._avatarLayerKeys[i]}`));
+    return sprites[0];
   }
 
   _drawChar(cx, baseY, size, color) {
