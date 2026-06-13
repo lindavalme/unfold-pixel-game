@@ -6,7 +6,7 @@ const DEPTH      = 200;
 const TYPE_STYLE = {
   sign:   { border: 0xf7c948, label: '[ Sign ]',   action: null },
   npc:    { border: 0x44ccff, label: null,          action: null },
-  object: { border: 0xff9944, label: '[ Object ]',  action: '[ E ] / Tap to interact' },
+  object: { border: 0xff9944, label: '[ Object ]',  action: '[ Space ] / Tap to interact' },
 };
 const DEFAULT_STYLE = { border: 0xffffff, label: null, action: null };
 
