@@ -147,8 +147,8 @@ export function defaultAvatarConfig() {
     kids: false,
     body: '10',
     eyes: '01',
-    hair: '00',        // '00' = bald (no hair layer)
-    hair_color: '01',
+    hair: '16',
+    hair_color: '04',
     outfit: '03',
     outfit_color: '01',
   };
