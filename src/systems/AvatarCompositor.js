@@ -2,13 +2,23 @@ import manifest from '../data/avatar-manifest.json';
 
 const BASE = 'assets/characters';
 
+// Tinted body variants: body numbers beyond the kit's base count reuse a base
+// sheet with a Phaser tint applied to the body and eyes sprites. Tinting works
+// by multiplying RGB channels, so a light base sheet is required.
+// The tint is also applied to the eyes layer since it contains skin pixels.
+const BODY_TINT_MAP = {
+  '10': { baseBody: '01', tint: 0x7B3F00 }, // rich brown / melanated
+};
+
 /**
  * Returns the texture keys and load paths for each avatar layer.
  */
 export function getAvatarLayers(config) {
   const prefix = config.kids ? '_kids' : '';
 
-  const bodyKey   = `avatar_body${prefix}_${config.body}`;
+  // Tinted variants reuse a base body sheet — resolve the actual sheet number
+  const bodySheetNum = BODY_TINT_MAP[config.body]?.baseBody ?? config.body;
+  const bodyKey   = `avatar_body${prefix}_${bodySheetNum}`;
   const eyesKey   = `avatar_eyes${prefix}_${config.eyes}`;
   const outfitKey = config.kids
     ? `avatar_outfit_kids_${config.outfit}`
@@ -97,6 +107,13 @@ export function composeAvatar(scene, config, x, y, startFrame) {
   body.body.setSize(16, 8).setOffset(8, 52);
   body.body.setCollideWorldBounds(true);
 
+  // Apply skin tint to body (index 0) and eyes (index 1) for tinted body variants
+  const tint = BODY_TINT_MAP[config.body]?.tint;
+  if (tint) {
+    sprites[0].setTint(tint);
+    sprites[1].setTint(tint);
+  }
+
   return { sprite: body, layers: sprites };
 }
 
@@ -128,7 +145,7 @@ export function playAvatarAnim(avatar, animKey) {
 export function defaultAvatarConfig() {
   return {
     kids: false,
-    body: '04',
+    body: '10',
     eyes: '01',
     hair: '00',        // '00' = bald (no hair layer)
     hair_color: '01',
