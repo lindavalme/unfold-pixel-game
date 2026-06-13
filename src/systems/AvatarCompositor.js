@@ -10,6 +10,12 @@ const BODY_TINT_MAP = {
   '10': { baseBody: '02', tint: 0x6B4C35 }, // rich brown / melanated
 };
 
+// Hair color tints: applied when the source sheet reads as the wrong hue.
+// Color '07' ships as dark blue-gray — tint to neutral near-black instead.
+const HAIR_TINT_MAP = {
+  '07': 0x2A2A2A,
+};
+
 /**
  * Returns the texture keys and load paths for each avatar layer.
  */
@@ -108,10 +114,16 @@ export function composeAvatar(scene, config, x, y, startFrame) {
   body.body.setCollideWorldBounds(true);
 
   // Apply skin tint to body (index 0) and eyes (index 1) for tinted body variants
-  const tint = BODY_TINT_MAP[config.body]?.tint;
-  if (tint) {
-    sprites[0].setTint(tint);
-    sprites[1].setTint(tint);
+  const bodyTint = BODY_TINT_MAP[config.body]?.tint;
+  if (bodyTint) {
+    sprites[0].setTint(bodyTint);
+    sprites[1].setTint(bodyTint);
+  }
+
+  // Apply hair color correction tint — hair is at index 2 when present
+  if (config.hair !== '00') {
+    const hairTint = HAIR_TINT_MAP[config.hair_color];
+    if (hairTint) sprites[2].setTint(hairTint);
   }
 
   return { sprite: body, layers: sprites };
@@ -148,7 +160,7 @@ export function defaultAvatarConfig() {
     body: '10',
     eyes: '01',
     hair: '16',
-    hair_color: '04',
+    hair_color: '07',
     outfit: '03',
     outfit_color: '01',
   };
