@@ -128,7 +128,7 @@ export function playAvatarAnim(avatar, animKey) {
 export function defaultAvatarConfig() {
   return {
     kids: false,
-    body: '01',
+    body: '04',
     eyes: '01',
     hair: '00',        // '00' = bald (no hair layer)
     hair_color: '01',
