@@ -7,7 +7,7 @@ const BASE = 'assets/characters';
 // by multiplying RGB channels, so a light base sheet is required.
 // The tint is also applied to the eyes layer since it contains skin pixels.
 const BODY_TINT_MAP = {
-  '10': { baseBody: '02', tint: 0x7B3F00 }, // rich brown / melanated
+  '10': { baseBody: '02', tint: 0x6B4C35 }, // rich brown / melanated
 };
 
 /**
