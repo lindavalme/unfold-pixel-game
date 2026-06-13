@@ -10,17 +10,24 @@ export function getAvatarLayers(config) {
 
   const bodyKey   = `avatar_body${prefix}_${config.body}`;
   const eyesKey   = `avatar_eyes${prefix}_${config.eyes}`;
-  const hairKey   = `avatar_hair${prefix}_${config.hair}_${config.hair_color}`;
   const outfitKey = config.kids
     ? `avatar_outfit_kids_${config.outfit}`
     : `avatar_outfit_${config.outfit}_${config.outfit_color}`;
 
-  return [
+  const layers = [
     { key: bodyKey,   path: `${BASE}/bodies/${bodyKey}.png` },
     { key: eyesKey,   path: `${BASE}/eyes/${eyesKey}.png` },
-    { key: hairKey,   path: `${BASE}/hair/${hairKey}.png` },
-    { key: outfitKey, path: `${BASE}/outfits/${outfitKey}.png` },
   ];
+
+  // hair '00' = bald — omit the hair layer entirely
+  if (config.hair !== '00') {
+    const hairKey = `avatar_hair${prefix}_${config.hair}_${config.hair_color}`;
+    layers.push({ key: hairKey, path: `${BASE}/hair/${hairKey}.png` });
+  }
+
+  layers.push({ key: outfitKey, path: `${BASE}/outfits/${outfitKey}.png` });
+
+  return layers;
 }
 
 /**
@@ -121,12 +128,12 @@ export function playAvatarAnim(avatar, animKey) {
 export function defaultAvatarConfig() {
   return {
     kids: false,
-    body: '03',       // try a different skin tone
-    eyes: '04',       // try different eyes
-    hair: '05',       // try a different hairstyle
-    hair_color: '03', // try a different hair color
-    outfit: '07',     // try a different outfit
-    outfit_color: '02', // try a different outfit color
+    body: '04',
+    eyes: '01',
+    hair: '01',        // use '00' for bald (no hair layer)
+    hair_color: '01',
+    outfit: '03',
+    outfit_color: '01',
   };
 }
 
@@ -142,8 +149,9 @@ export function validateAvatarConfig(config) {
     return String(Math.min(Math.max(n, 1), max)).padStart(2, '0');
   };
 
-  const hair = clamp(config.hair, m.hair.count);
-  const hairColorMax = m.hair.exceptions?.[hair] ?? m.hair.colors;
+  // '00' is the bald sentinel — skip clamping so it passes through unchanged
+  const hair = config.hair === '00' ? '00' : clamp(config.hair, m.hair.count);
+  const hairColorMax = hair === '00' ? 1 : (m.hair.exceptions?.[hair] ?? m.hair.colors);
   const outfit = clamp(config.outfit, m.outfit.count);
   const outfitColorMax = config.kids ? 1 : (m.outfit.colors[outfit] ?? 1);
 
