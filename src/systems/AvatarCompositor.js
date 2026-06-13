@@ -1,0 +1,159 @@
+import manifest from '../data/avatar-manifest.json';
+
+const BASE = 'assets/characters';
+
+/**
+ * Returns the texture keys and load paths for each avatar layer.
+ */
+export function getAvatarLayers(config) {
+  const prefix = config.kids ? '_kids' : '';
+
+  const bodyKey   = `avatar_body${prefix}_${config.body}`;
+  const eyesKey   = `avatar_eyes${prefix}_${config.eyes}`;
+  const hairKey   = `avatar_hair${prefix}_${config.hair}_${config.hair_color}`;
+  const outfitKey = config.kids
+    ? `avatar_outfit_kids_${config.outfit}`
+    : `avatar_outfit_${config.outfit}_${config.outfit_color}`;
+
+  return [
+    { key: bodyKey,   path: `${BASE}/bodies/${bodyKey}.png` },
+    { key: eyesKey,   path: `${BASE}/eyes/${eyesKey}.png` },
+    { key: hairKey,   path: `${BASE}/hair/${hairKey}.png` },
+    { key: outfitKey, path: `${BASE}/outfits/${outfitKey}.png` },
+  ];
+}
+
+/**
+ * Preloads all avatar layer spritesheets in a Phaser scene's preload().
+ */
+export function preloadAvatar(scene, config) {
+  const layers = getAvatarLayers(config);
+  for (const { key, path } of layers) {
+    if (!scene.textures.exists(key)) {
+      scene.load.spritesheet(key, path, {
+        frameWidth: 32,
+        frameHeight: 64,
+      });
+    }
+  }
+}
+
+// Overlay sheets are 1792px wide = 56 cols × 32px.
+// The body sheet is 1854px wide = 57 cols (extra col holds prop sprites).
+// Re-registering body frames to the 56-col overlay layout keeps all layers
+// frame-aligned so idle/walk indices match across body and overlays.
+const OVERLAY_COLS = 56;
+const OVERLAY_ROWS = 20;
+const FRAME_W = 32;
+const FRAME_H = 64;
+
+function normaliseBodyFrames(scene, bodyKey) {
+  const tex = scene.textures.get(bodyKey);
+  // tex.add() is a no-op if a frame already exists. Instead, get each
+  // auto-registered frame and update its cut coordinates in-place so that
+  // frame i maps to the same visual position as the 56-col overlay sheets.
+  for (let i = 0; i < OVERLAY_COLS * OVERLAY_ROWS; i++) {
+    const col = i % OVERLAY_COLS;
+    const row = Math.floor(i / OVERLAY_COLS);
+    if (tex.has(i)) {
+      tex.get(i).setSize(FRAME_W, FRAME_H, col * FRAME_W, row * FRAME_H);
+    }
+  }
+}
+
+/**
+ * Creates a layered avatar as stacked sprites (body → eyes → hair → outfit).
+ * All layers share position and animations — no RenderTexture needed.
+ *
+ * Returns { sprite, layers } where:
+ *   sprite — the body sprite with physics (use this as `this.player`)
+ *   layers — all 4 sprites for animation sync and cleanup
+ */
+export function composeAvatar(scene, config, x, y, startFrame) {
+  const layerDefs = getAvatarLayers(config);
+
+  // Normalise body texture frame grid to match overlays before creating sprites
+  normaliseBodyFrames(scene, layerDefs[0].key);
+
+  const sprites = layerDefs.map(({ key }, i) => {
+    const spr = scene.physics.add.sprite(x, y, key, startFrame);
+    spr.setOrigin(0.5, 0.5);
+    spr.setDepth(8 + i * 0.1); // body=8.0, eyes=8.1, hair=8.2, outfit=8.3
+    spr.setScale(1);
+    if (i > 0) {
+      spr.body.setEnable(false);
+    }
+    return spr;
+  });
+
+  const [body] = sprites;
+  body.body.setSize(16, 8).setOffset(8, 52);
+  body.body.setCollideWorldBounds(true);
+
+  return { sprite: body, layers: sprites };
+}
+
+/**
+ * Syncs overlay positions to match the body sprite. Call every update().
+ */
+export function syncAvatarLayers(avatar) {
+  const { sprite, layers } = avatar;
+  for (let i = 1; i < layers.length; i++) {
+    layers[i].setPosition(sprite.x, sprite.y);
+    layers[i].setFlipX(sprite.flipX);
+  }
+}
+
+/**
+ * Plays an animation key on all avatar layers simultaneously.
+ */
+export function playAvatarAnim(avatar, animKey) {
+  for (const spr of avatar.layers) {
+    if (spr.anims.currentAnim?.key !== animKey) {
+      spr.play(animKey);
+    }
+  }
+}
+
+/**
+ * Returns the default avatar config.
+ */
+export function defaultAvatarConfig() {
+  return {
+    kids: false,
+    body: '03',       // try a different skin tone
+    eyes: '04',       // try different eyes
+    hair: '05',       // try a different hairstyle
+    hair_color: '03', // try a different hair color
+    outfit: '07',     // try a different outfit
+    outfit_color: '02', // try a different outfit color
+  };
+}
+
+/**
+ * Validates an avatar config against the manifest, clamping out-of-range values.
+ */
+export function validateAvatarConfig(config) {
+  const k = config.kids ? 'kids' : 'adult';
+  const m = manifest[k];
+
+  const clamp = (val, max) => {
+    const n = parseInt(val, 10);
+    return String(Math.min(Math.max(n, 1), max)).padStart(2, '0');
+  };
+
+  const hair = clamp(config.hair, m.hair.count);
+  const hairColorMax = m.hair.exceptions?.[hair] ?? m.hair.colors;
+  const outfit = clamp(config.outfit, m.outfit.count);
+  const outfitColorMax = config.kids ? 1 : (m.outfit.colors[outfit] ?? 1);
+
+  return {
+    kids: !!config.kids,
+    body: clamp(config.body, m.body.count),
+    eyes: clamp(config.eyes, m.eyes.count),
+    hair,
+    hair_color: clamp(config.hair_color, hairColorMax),
+    outfit,
+    outfit_color: clamp(config.outfit_color, outfitColorMax),
+  };
+}
