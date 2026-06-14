@@ -9,6 +9,24 @@
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
+      :root {
+        /* Desktop: GameBoy is 100vh tall — vh scales buttons with the device */
+        --dpad-arm: clamp(32px, 4.2vh,  56px);
+        --ab-size:  clamp(42px, 5.8vh,  70px);
+        --ab-diag:  clamp(18px, 2.5vh,  32px);
+        --meta-pad: clamp(5px, 0.65vh, 10px) clamp(12px, 1.6vh, 22px);
+      }
+
+      @media (max-width: 768px) {
+        :root {
+          /* Mobile: controls occupy ~40dvh — dvh scales relative to that zone */
+          --dpad-arm: clamp(36px, 5.2dvh, 54px);
+          --ab-size:  clamp(46px, 7.2dvh, 66px);
+          --ab-diag:  clamp(20px, 3.2dvh, 34px);
+          --meta-pad: clamp(7px, 1dvh, 12px) clamp(14px, 2dvh, 24px);
+        }
+      }
+
       /* ── DESKTOP — GameBoy device, aspect-ratio locked ── */
       @media (min-width: 769px) {
         body {
@@ -106,15 +124,8 @@
           -webkit-user-select: none;
         }
 
-        /* Larger touch targets on mobile */
-        .dpad { width: 138px; }
-        .dpad__up, .dpad__down, .dpad__left, .dpad__right, .dpad__nub {
-          width: 46px;
-          height: 46px;
-        }
-        .gb-btn { width: 56px; height: 56px; }
-        .gb-btn--a { margin-bottom: 28px; }
-        .gb-meta { padding: 9px 18px; font-size: 9px; }
+        /* Mobile type overrides */
+        .gb-meta { font-size: 9px; }
         .gameboy__brand { font-size: 8px; padding: 5px 16px 3px; }
       }
 
@@ -143,7 +154,7 @@
         flex-direction: column;
         align-items: center;
         gap: 0;
-        width: 114px;
+        width: calc(var(--dpad-arm) * 3);
       }
 
       .dpad__mid {
@@ -170,8 +181,8 @@
 
       .dpad__up,
       .dpad__down {
-        width: 38px;
-        height: 38px;
+        width: var(--dpad-arm);
+        height: var(--dpad-arm);
         border-radius: 4px 4px 0 0;
       }
 
@@ -181,8 +192,8 @@
 
       .dpad__left,
       .dpad__right {
-        width: 38px;
-        height: 38px;
+        width: var(--dpad-arm);
+        height: var(--dpad-arm);
         border-radius: 4px 0 0 4px;
       }
 
@@ -191,8 +202,8 @@
       }
 
       .dpad__nub {
-        width: 38px;
-        height: 38px;
+        width: var(--dpad-arm);
+        height: var(--dpad-arm);
         background: #252538;
         display: flex;
         align-items: center;
@@ -254,7 +265,7 @@
         background: #3a3a58;
         border: none;
         border-radius: 20px;
-        padding: 6px 16px;
+        padding: var(--meta-pad);
         font-family: 'Silkscreen', monospace;
         font-size: 8px;
         color: #8888bb;
@@ -288,8 +299,8 @@
       }
 
       .gb-btn {
-        width: 48px;
-        height: 48px;
+        width: var(--ab-size);
+        height: var(--ab-size);
         border-radius: 50%;
         border: none;
         font-family: 'Press Start 2P', monospace;
@@ -319,7 +330,7 @@
 
       .gb-btn--a {
         background: #bf2650;
-        margin-bottom: 24px;
+        margin-bottom: var(--ab-diag);
       }
 
       .gb-speaker {
