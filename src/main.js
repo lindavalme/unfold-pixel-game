@@ -9,6 +9,7 @@ new Phaser.Game({
   height: 480,
   pixelArt: true,
   antialias: false,
+  resolution: window.devicePixelRatio,
   backgroundColor: '#2d2d2d',
   parent: 'game-container',
   physics: {
