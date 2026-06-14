@@ -185,7 +185,7 @@ export function defaultAvatarConfig() {
     kids: false,
     body: '10',
     eyes: '01',
-    hair: '16',
+    hair: '00',
     hair_color: '07',
     outfit: '03',
     outfit_color: '01',
