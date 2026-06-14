@@ -289,7 +289,8 @@ export default class WorldScene extends Phaser.Scene {
 
 
     this._joystick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0 };
-    if (this.sys.game.device.input.touch) {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (this.sys.game.device.input.touch && isMobile) {
       this._createJoystick();
     }
 
@@ -325,15 +326,21 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   _createJoystick() {
-    const RADIUS   = 48;
-    const THUMB_R  = 24;
-    const MARGIN   = 80; // distance from bottom-left corner
+    const RADIUS      = 48;
+    const THUMB_R     = 24;
+    const MARGIN      = 80;
+    const TAP_MAX_DIST = 8;
+    const TAP_MAX_MS   = 300;
 
     const baseX = MARGIN;
     const baseY = this.scale.height - MARGIN;
 
-    const gfx = this.add.graphics().setDepth(100).setScrollFactor(0);
-    const thumb = this.add.graphics().setDepth(101).setScrollFactor(0);
+    let _tapStartTime = 0;
+    let _tapStartX    = 0;
+    let _tapStartY    = 0;
+
+    const gfx   = this.add.graphics().setDepth(100).setScrollFactor(0);
+    const thumb  = this.add.graphics().setDepth(101).setScrollFactor(0);
 
     const drawBase = () => {
       gfx.clear();
@@ -353,13 +360,14 @@ export default class WorldScene extends Phaser.Scene {
     drawThumb(baseX, baseY);
 
     this.input.on('pointerdown', (ptr) => {
-      // Ignore touches that start on the right edge (reserved for future UI buttons)
       if (ptr.x > this.scale.width - 48) return;
       this._joystick.active = true;
       this._joystick.baseX  = ptr.x;
       this._joystick.baseY  = ptr.y;
+      _tapStartTime = Date.now();
+      _tapStartX    = ptr.x;
+      _tapStartY    = ptr.y;
 
-      // Reposition base graphic to touch origin
       gfx.clear();
       gfx.fillStyle(0x000000, 0.25);
       gfx.fillCircle(ptr.x, ptr.y, RADIUS);
@@ -378,7 +386,6 @@ export default class WorldScene extends Phaser.Scene {
       const tx = this._joystick.baseX + Math.cos(angle) * clamped;
       const ty = this._joystick.baseY + Math.sin(angle) * clamped;
 
-      // Normalise to [-1, 1]; dead-zone at 15% of radius
       const norm = dist > RADIUS * 0.15 ? Math.min(dist / RADIUS, 1) : 0;
       this._joystick.dx = norm * Math.cos(angle);
       this._joystick.dy = norm * Math.sin(angle);
@@ -386,7 +393,14 @@ export default class WorldScene extends Phaser.Scene {
       drawThumb(tx, ty);
     });
 
-    const release = () => {
+    const release = (ptr) => {
+      if (ptr && this._joystick.active) {
+        const dist    = Math.hypot(ptr.x - _tapStartX, ptr.y - _tapStartY);
+        const elapsed = Date.now() - _tapStartTime;
+        if (dist < TAP_MAX_DIST && elapsed < TAP_MAX_MS) {
+          this._triggerInteract();
+        }
+      }
       this._joystick.active = false;
       this._joystick.dx = 0;
       this._joystick.dy = 0;
@@ -395,7 +409,7 @@ export default class WorldScene extends Phaser.Scene {
     };
 
     this.input.on('pointerup',     release);
-    this.input.on('pointercancel', release);
+    this.input.on('pointercancel', () => release(null));
   }
 
   update() {

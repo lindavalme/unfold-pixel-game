@@ -16,8 +16,8 @@ new Phaser.Game({
     arcade: { debug: false },
   },
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
   },
   scene: [BootScene, IntroScene, WorldScene, BattleScene],
 });
