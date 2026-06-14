@@ -52,7 +52,7 @@
           flex: 1;
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
-          align-items: center;
+          align-items: stretch;
           padding: 0 20px 28px;
           background: transparent;
           border-top: 2px solid #1e1e36;
@@ -96,7 +96,7 @@
           flex: 1;
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
-          align-items: center;
+          align-items: stretch;
           padding: 0 20px;
           padding-bottom: env(safe-area-inset-bottom);
           background: #1a1a2e;
@@ -113,7 +113,9 @@
           height: 42px;
         }
         .gb-btn { width: 52px; height: 52px; }
-        .gb-meta { padding: 7px 14px; font-size: 9px; }
+        .gb-btn--a { margin-bottom: 24px; }
+        .gb-meta { padding: 8px 16px; font-size: 9px; }
+        .gameboy__brand { font-size: 8px; padding: 5px 16px 3px; }
       }
 
       /* ── SHARED — canvas + buttons (all screen sizes) ─── */
@@ -133,6 +135,7 @@
         display: flex;
         justify-content: flex-start;
         align-items: center;
+        padding-top: 4px;
       }
 
       .dpad {
@@ -220,35 +223,42 @@
         pointer-events: none;
       }
 
-      /* Center: logo + meta buttons */
-      .gb-center {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .gb-logo {
+      /* Brand label — between screen and controls */
+      .gameboy__brand {
         font-family: 'Press Start 2P', monospace;
         font-size: 9px;
         color: #8888bb;
         letter-spacing: 2px;
         text-shadow: 0 0 8px rgba(136, 136, 187, 0.4);
+        padding: 8px 28px 4px;
+        flex-shrink: 0;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      /* Center: SELECT + START, bottom-aligned */
+      .gb-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        padding-bottom: 22px;
       }
 
       .gb-meta-btns {
         display: flex;
-        gap: 10px;
+        gap: 8px;
+        transform: rotate(-20deg);
       }
 
       .gb-meta {
-        background: #2e2e44;
+        background: #3a3a58;
         border: none;
         border-radius: 20px;
-        padding: 5px 10px;
+        padding: 5px 12px;
         font-family: 'Silkscreen', monospace;
         font-size: 8px;
-        color: #7777aa;
+        color: #8888bb;
         cursor: pointer;
         user-select: none;
         -webkit-user-select: none;
@@ -259,8 +269,8 @@
 
       .gb-meta:active,
       .gb-meta.pressed {
-        background: #4a4a66;
-        color: #aaaacc;
+        background: #5a5a7a;
+        color: #ccccee;
       }
 
       /* A/B buttons + speaker */
@@ -268,7 +278,8 @@
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        gap: 10px;
+        justify-content: center;
+        gap: 8px;
       }
 
       .gb-ab {
@@ -293,7 +304,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
       }
 
       .gb-btn:active,
@@ -304,20 +315,26 @@
       }
 
       .gb-btn--b {
-        background: #2a2a5a;
-        margin-bottom: 8px;
+        background: #bf2650;
       }
 
       .gb-btn--a {
-        background: #6b1a2a;
+        background: #bf2650;
+        margin-bottom: 20px;
       }
 
       .gb-speaker {
-        width: 40px;
-        height: 24px;
-        background-image: radial-gradient(circle, #2e2e50 1.5px, transparent 1.5px);
-        background-size: 7px 7px;
+        width: 34px;
+        height: 38px;
+        background-image: repeating-linear-gradient(
+          to right,
+          transparent 0px,
+          transparent 3px,
+          #2a2a44 3px,
+          #2a2a44 5px
+        );
         opacity: 0.7;
+        border-radius: 2px;
       }
     </style>
   </head>
@@ -326,6 +343,7 @@
       <div class="gameboy__screen">
         <div id="game-container"></div>
       </div>
+      <div class="gameboy__brand">UNFOLD</div>
       <div class="gameboy__controls">
         <div class="gb-left">
           <div class="dpad">
@@ -339,7 +357,6 @@
           </div>
         </div>
         <div class="gb-center">
-          <span class="gb-logo">UNFOLD</span>
           <div class="gb-meta-btns">
             <button class="gb-meta" data-key="Shift">SELECT</button>
             <button class="gb-meta" data-key="Enter">START</button>
