@@ -6,7 +6,7 @@ For full product vision, milestones, and element specs, see [BRIEF.md](BRIEF.md)
 # Tech Stack
 - **Phaser 3** — game engine (tilemap, physics, sprites, input)
 - **Vite** — bundler and dev server
-- **EasyStar.js** — A* pathfinding for click/tap-to-move
+- **EasyStar.js** — A* pathfinding (currently tabled; joystick is the preferred input)
 - **Tiled (.tmj)** — map format; tilesets embedded in `.tmj` (never external)
 - React + Tailwind — Builder UI (planned, not yet scaffolded)
 - Deployment: Vercel (auto-deploy from `main`)
@@ -68,7 +68,7 @@ Physics body: `setSize(16, 8).setOffset(8, 52)` — slim foot-area box.
 - Tilesets in `.tmj` must remain **embedded** — Phaser cannot read external `.tsj` references.
 - Tilesets with tile-level collision properties (`collides: true`) must have their `.tsj` loaded separately as JSON and injected into `Tileset.tileData` before `createLayer`. See `WorldScene.js` for the pattern.
 - Collision is set via `setCollisionByProperty({ collides: true })` — never hardcode tile indices.
-- Movement is click/tap-to-move (EasyStar A*) as the primary input; WASD/arrow keys are secondary desktop-only.
+- Movement is joystick-based (primary); WASD/arrow keys are secondary desktop-only. Do not re-implement tap-to-move / EasyStar pathfinding unless explicitly asked.
 - Game canvas is pixel-art (`pixelArt: true`, `antialias: false`) — never scale or filter sprites.
 - Config storage is URL hash in v1 — no backend writes.
 - The Home JSON schema is the source of truth for element configuration — see BRIEF.md §10.
@@ -78,9 +78,15 @@ Physics body: `setSize(16, 8).setOffset(8, 52)` — slim foot-area box.
 - Do not make changes to major flows (scene pipeline, tilemap layers, Home JSON schema, interaction system) without explicit approval.
 - Check current milestone status in BRIEF.md §20 before picking up new work.
 - After editing the Tiled working file (`home.tmx`): export as JSON → overwrite `home.tmj` with tilesets embedded.
+- Follow the branching rules in BRANCHING.md. Key constraints:
+  - `main` always carries the demo config — never gift-specific names, avatars, or copy
+  - New feature/fix → create `feat/<scope>` off `main`; recipient work → `gift/<name>` off `main`
+  - If on `main` when code changes are needed → stop and confirm the correct branch first
+- After any `git push`, always surface both the **branch preview URL** (`unfold-git-<branch>-lindavalmes-projects.vercel.app`) and the **per-commit URL** (`unfold-<hash>-lindavalmes-projects.vercel.app`). Skip this only when no deployable file was changed (e.g. doc-only edits, read-only exploration sessions).
 
 # References
 - [BRIEF.md](BRIEF.md) — full product spec, milestones, element/mini-game types, data model
+- [BRANCHING.md](BRANCHING.md) — branching workflow: gift branches, feature branches, deploy URLs
 - [LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors) — paid asset pack (tilesets + characters)
 - [Tiled Map Editor](https://mapeditor.org) — for editing `.tmx` maps
 - [Phaser 3 Docs](https://newdocs.phaser.io/docs/3.88.2)
