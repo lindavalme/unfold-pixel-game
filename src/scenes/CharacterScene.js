@@ -8,27 +8,42 @@ import {
   defaultAvatarConfig,
 } from '../systems/AvatarCompositor.js';
 
-const PREVIEW_X     = 100;
-const PREVIEW_Y     = 405; // feet position (origin is bottom-center for buildAvatarDisplay)
+// ── Layout constants ───────────────────────────────────────────────────────────
+const PREVIEW_X     = 320;
+const PREVIEW_Y     = 238;  // feet position (origin is bottom-center)
 const PREVIEW_SCALE = 3;
-const PREVIEW_FRAME = 74;  // idle-down start frame
+const PREVIEW_FRAME = 74;   // idle-down start
 
 const TABS       = ['body', 'eyes', 'hair', 'outfit'];
 const TAB_LABELS = { body: 'BODY', eyes: 'EYES', hair: 'HAIR', outfit: 'OUTFIT' };
 
-// Only idle-down needed for the static preview
-const IDLE_FRAMES = {
-  'idle-down': [74, 75, 76, 77, 78, 79],
-};
+const IDLE_FRAMES = { 'idle-down': [74, 75, 76, 77, 78, 79] };
 
-const SWATCH_SIZE = 26;
-const SWATCH_GAP  = 5;
+const ITEMS_PER_PAGE = 8;
+const GRID_COLS      = 4;
+const CELL_W         = 130;
+const CELL_H         = 60;
+const CELL_GAP_X     = 10;
+const CELL_GAP_Y     = 10;
+// 4 cols × 130 + 3 × 10 = 550 → left edge = (640-550)/2 = 45
+const GRID_LEFT      = 45;
+const GRID_TOP       = 284;
+// Col x-centers: 45 + 65 = 110, +140 = 250, +140 = 390, +140 = 530
+const COL_CX         = [110, 250, 390, 530];
+// Row y-centers: 284 + 30 = 314, + 60 + 10 + 30 = 414... recalc to fit y=284-414
+// Available height 284–414 = 130px → 2 rows × 60 + 1 gap × 10 = 130 ✓
+const ROW_CY         = [314, 384];
 
-// Tab geometry (right panel starts at x=200, 440px wide → 4 tabs × 110px each)
-const TAB_W = 109;
-const TAB_H = 34;
-const TAB_Y = 56;
-const TAB_X_START = 202;
+const DOT_Y       = 258;
+const DOT_RADIUS  = 10;
+const DOT_SPACING = 26;
+
+const TAB_BAR_Y = 422;
+const TAB_W     = 160;
+const TAB_H     = 58;
+const TAB_CX    = [80, 240, 400, 560];
+
+const MINI_SCALE = 1.0; // scale for grid cell avatars
 
 export default class CharacterScene extends Phaser.Scene {
   constructor() {
@@ -38,27 +53,29 @@ export default class CharacterScene extends Phaser.Scene {
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   init(data) {
-    this._draft         = { ...(data.avatarConfig ?? defaultAvatarConfig()) };
-    this._activeTab     = 'body';
+    this._draft          = { ...(data.avatarConfig ?? defaultAvatarConfig()) };
+    this._activeTab      = 'body';
+    this._currentPage    = 0;
     this._previewSprites = [];
-    this._swatchObjects  = [];
+    this._dotZones       = [];
+    this._dotGfx         = null;
+    this._gridObjects    = [];
+    this._pageNavObjects = [];
+    this._tabGfx         = null;
+    this._tabTextObjs    = {};
     this._loadPending    = false;
+    this._gridLoadPending = false;
   }
 
   preload() {
-    // Current config is already cached by WorldScene — this is a no-op.
-    // CharacterScene loads neighbour textures lazily in _loadAndRefresh.
     preloadAvatar(this, this._draft);
   }
 
   create() {
     this._buildBackground();
-    this._buildPreviewFrame();
-    this._buildTabs();
-    this._buildOptionSelector();
-    this._buildColorSection();
-    this._buildDoneButton();
-    this._buildCloseButton();
+    this._buildHeader();
+    this._buildDotLayer();
+    this._buildTabBar();
 
     this._refreshPreview();
     this._refreshUI();
@@ -66,180 +83,371 @@ export default class CharacterScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-ESC', () => this._cancel());
   }
 
-  // ── Background & chrome ───────────────────────────────────────────────────────
+  // ── Background ────────────────────────────────────────────────────────────────
 
   _buildBackground() {
-    this.add.rectangle(320, 240, 640, 480, 0x08081a, 0.93).setDepth(0);
-    this.add.rectangle(100, 240, 200, 480, 0x10103a, 0.6).setDepth(1);
+    this.add.rectangle(320, 240, 640, 480, 0x08081a, 0.97).setDepth(0);
 
-    const div = this.add.graphics().setDepth(1);
-    div.lineStyle(1, 0x2a2a5a, 1);
-    div.lineBetween(200, 0, 200, 480);
+    // Separator lines
+    const g = this.add.graphics().setDepth(1);
+    g.lineStyle(1, 0x1e1e48, 1);
+    g.lineBetween(0, 244, 640, 244);  // below avatar
+    g.lineBetween(0, 276, 640, 276);  // below dots
+    g.lineBetween(0, TAB_BAR_Y, 640, TAB_BAR_Y); // above tab bar
+  }
 
-    this.add.text(100, 26, 'PREVIEW', {
-      fontFamily: 'Silkscreen', fontSize: '12px',
-      color: '#6666aa', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(2);
+  // ── Header ────────────────────────────────────────────────────────────────────
 
-    this.add.text(420, 26, 'CUSTOMIZE YOUR LOOK', {
+  _buildHeader() {
+    this.add.rectangle(320, 22, 640, 44, 0x0d0d1a, 1).setDepth(1);
+
+    const xBtn = this.add.text(24, 22, '✕', {
+      fontFamily: 'Silkscreen', fontSize: '14px',
+      color: '#555577', resolution: 2,
+    }).setOrigin(0.5, 0.5).setDepth(4).setInteractive()
+      .on('pointerover',  function () { this.setColor('#aaaacc'); })
+      .on('pointerout',   function () { this.setColor('#555577'); })
+      .on('pointerdown',  () => this._cancel());
+
+    this.add.text(320, 22, 'YOUR LOOK', {
       fontFamily: 'Silkscreen', fontSize: '13px',
       color: '#f7c948', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(2);
+    }).setOrigin(0.5, 0.5).setDepth(4);
+
+    this.add.text(616, 22, 'SAVE', {
+      fontFamily: 'Silkscreen', fontSize: '13px',
+      color: '#88ee88', resolution: 2,
+    }).setOrigin(0.5, 0.5).setDepth(4).setInteractive()
+      .on('pointerover',  function () { this.setColor('#bbffbb'); })
+      .on('pointerout',   function () { this.setColor('#88ee88'); })
+      .on('pointerdown',  () => this._confirm());
   }
 
-  _buildPreviewFrame() {
-    const gfx = this.add.graphics().setDepth(1);
-    gfx.lineStyle(1, 0x2a2a5a, 0.8);
-    gfx.strokeRect(18, 46, 164, 390);
+  // ── Color dot layer ───────────────────────────────────────────────────────────
+
+  _buildDotLayer() {
+    this._dotGfx = this.add.graphics().setDepth(3);
+    this._refreshColorDots();
   }
 
-  // ── Tabs ──────────────────────────────────────────────────────────────────────
+  _refreshColorDots() {
+    // Destroy old interactive zones
+    for (const z of this._dotZones) z.destroy();
+    this._dotZones = [];
+    this._dotGfx.clear();
 
-  _buildTabs() {
+    const { colorKey, colorCount, colorVal } = this._getColorInfo();
+
+    // Hide dot row when there's no color choice
+    if (!colorKey || colorCount <= 1) return;
+
+    const totalW  = (colorCount - 1) * DOT_SPACING;
+    const startX  = 320 - totalW / 2;
+
+    for (let i = 1; i <= colorCount; i++) {
+      const cx     = startX + (i - 1) * DOT_SPACING;
+      const padded = String(i).padStart(2, '0');
+      const active = padded === colorVal;
+
+      this._dotGfx.fillStyle(active ? 0xf7c948 : 0x2a2a52, 1);
+      this._dotGfx.fillCircle(cx, DOT_Y, DOT_RADIUS);
+      this._dotGfx.lineStyle(active ? 2 : 1, active ? 0xffffff : 0x333370, 1);
+      this._dotGfx.strokeCircle(cx, DOT_Y, DOT_RADIUS);
+
+      const zone = this.add.zone(cx, DOT_Y, DOT_RADIUS * 2 + 6, DOT_RADIUS * 2 + 6)
+        .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
+        .on('pointerdown', () => this._setColor(colorKey, padded));
+
+      this._dotZones.push(zone);
+    }
+  }
+
+  // ── Option grid ───────────────────────────────────────────────────────────────
+
+  _destroyGrid() {
+    for (const obj of this._gridObjects) obj.destroy();
+    this._gridObjects = [];
+    for (const obj of this._pageNavObjects) obj.destroy();
+    this._pageNavObjects = [];
+  }
+
+  _rebuildGrid() {
+    this._destroyGrid();
+
+    const total     = this._getTotalOptions();
+    const pageStart = this._currentPage * ITEMS_PER_PAGE;
+    const pageEnd   = Math.min(pageStart + ITEMS_PER_PAGE, total);
+
+    // Gather textures needed for this page and load any missing ones
+    const needed = [];
+    for (let i = pageStart; i < pageEnd; i++) {
+      const optVal = this._getOptionVal(i);
+      const draft  = { ...this._draft, [this._activeTab]: optVal };
+      const layers = getAvatarLayers(draft);
+      for (const { key, path } of layers) {
+        if (!this.textures.exists(key)) needed.push({ key, path });
+      }
+    }
+
+    if (needed.length > 0 && !this._gridLoadPending) {
+      this._gridLoadPending = true;
+      for (const { key, path } of needed) {
+        this.load.spritesheet(key, path, { frameWidth: 32, frameHeight: 64 });
+      }
+      this.load.once('complete', () => {
+        this._gridLoadPending = false;
+        this._rebuildGrid();
+      });
+      this.load.start();
+      return;
+    }
+
+    if (this._gridLoadPending) return;
+
+    // Draw cells
+    for (let i = pageStart; i < pageEnd; i++) {
+      const slotIdx = i - pageStart;
+      const col     = slotIdx % GRID_COLS;
+      const row     = Math.floor(slotIdx / GRID_COLS);
+      const cx      = COL_CX[col];
+      const cy      = ROW_CY[row];
+
+      const optVal  = this._getOptionVal(i);
+      const active  = optVal === this._getDraftVal();
+
+      // Cell background
+      const bg = this.add.graphics().setDepth(2);
+      bg.fillStyle(active ? 0x1a1a3e : 0x10102a, 1);
+      bg.fillRect(cx - CELL_W / 2, cy - CELL_H / 2, CELL_W, CELL_H);
+      bg.lineStyle(active ? 2 : 1, active ? 0xf7c948 : 0x222244, 1);
+      bg.strokeRect(cx - CELL_W / 2, cy - CELL_H / 2, CELL_W, CELL_H);
+      this._gridObjects.push(bg);
+
+      // Mini avatar or bald placeholder
+      if (this._activeTab === 'hair' && optVal === '00') {
+        const t = this.add.text(cx, cy, 'BALD', {
+          fontFamily: 'Silkscreen', fontSize: '11px',
+          color: active ? '#f7c948' : '#666688', resolution: 2,
+        }).setOrigin(0.5, 0.5).setDepth(3);
+        this._gridObjects.push(t);
+      } else {
+        const cellConfig = { ...this._draft, [this._activeTab]: optVal };
+        const layers     = getAvatarLayers(cellConfig);
+        const allLoaded  = layers.every(({ key }) => this.textures.exists(key));
+
+        if (allLoaded) {
+          this._renderCellStack(cx, cy, cellConfig, layers);
+        }
+      }
+
+      // Tap zone
+      const zone = this.add.zone(cx, cy, CELL_W, CELL_H)
+        .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
+        .on('pointerdown', () => {
+          this._selectOption(optVal);
+        });
+      this._gridObjects.push(zone);
+    }
+
+    // Page navigation
+    if (total > ITEMS_PER_PAGE) {
+      this._buildPageNav(total);
+    }
+  }
+
+  _renderCellStack(cx, cy, cellConfig, layers) {
+    // Feet pinned at cy + CELL_H/2 - 2, scale=MINI_SCALE
+    const feetY = cy + CELL_H / 2 - 2;
+
+    layers.forEach(({ key }, i) => {
+      const spr = this.add.sprite(cx, feetY, key, PREVIEW_FRAME)
+        .setOrigin(0.5, 1)
+        .setScale(MINI_SCALE)
+        .setDepth(3 + i * 0.1);
+      this._gridObjects.push(spr);
+    });
+
+    // Apply tints (same logic as AvatarCompositor)
+    const sprs = this._gridObjects.slice(this._gridObjects.length - layers.length);
+    const { body, body: _b, ...rest } = cellConfig;
+
+    const BODY_TINT_MAP = { '10': 0x6B4C35 };
+    const HAIR_TINT_MAP = { '07': 0x3A3A3A };
+
+    const bodyTint = BODY_TINT_MAP[cellConfig.body];
+    if (bodyTint) {
+      sprs[0].setTint(bodyTint);
+      if (sprs[1]) sprs[1].setTint(bodyTint);
+    }
+    if (cellConfig.hair !== '00' && sprs[2]) {
+      const hairTint = HAIR_TINT_MAP[cellConfig.hair_color];
+      if (hairTint) sprs[2].setTint(hairTint);
+    }
+  }
+
+  _buildPageNav(total) {
+    const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+    const navY = 413;
+
+    const counter = this.add.text(320, navY, `${this._currentPage + 1} / ${totalPages}`, {
+      fontFamily: 'Silkscreen', fontSize: '11px',
+      color: '#8888aa', resolution: 2,
+    }).setOrigin(0.5, 0.5).setDepth(3);
+    this._pageNavObjects.push(counter);
+
+    if (this._currentPage > 0) {
+      this._makeMiniBtn(280, navY, '◀', () => {
+        this._currentPage--;
+        this._rebuildGrid();
+      });
+    }
+
+    if (this._currentPage < totalPages - 1) {
+      this._makeMiniBtn(360, navY, '▶', () => {
+        this._currentPage++;
+        this._rebuildGrid();
+      });
+    }
+  }
+
+  _makeMiniBtn(cx, cy, label, onClick) {
+    const W = 28; const H = 22;
+    const gfx = this.add.graphics().setDepth(3);
+    gfx.fillStyle(0x1a1a3e, 1);
+    gfx.fillRect(cx - W / 2, cy - H / 2, W, H);
+    gfx.lineStyle(1, 0x333366, 1);
+    gfx.strokeRect(cx - W / 2, cy - H / 2, W, H);
+    this._pageNavObjects.push(gfx);
+
+    const txt = this.add.text(cx, cy, label, {
+      fontFamily: 'Silkscreen', fontSize: '11px',
+      color: '#aaaadd', resolution: 2,
+    }).setOrigin(0.5, 0.5).setDepth(4);
+    this._pageNavObjects.push(txt);
+
+    const zone = this.add.zone(cx, cy, W + 8, H + 8)
+      .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
+      .on('pointerdown', onClick);
+    this._pageNavObjects.push(zone);
+  }
+
+  // ── Tab bar ───────────────────────────────────────────────────────────────────
+
+  _buildTabBar() {
     this._tabGfx = this.add.graphics().setDepth(2);
 
     TABS.forEach((tab, i) => {
-      const tx = TAB_X_START + i * (TAB_W + 1);
+      const cx = TAB_CX[i];
+      const cy = TAB_BAR_Y + TAB_H / 2;
 
-      const text = this.add.text(tx + TAB_W / 2, TAB_Y + TAB_H / 2, TAB_LABELS[tab], {
+      const txt = this.add.text(cx, cy, TAB_LABELS[tab], {
         fontFamily: 'Silkscreen', fontSize: '12px',
-        color: '#ffffff', resolution: 2,
+        color: '#6666aa', resolution: 2,
       }).setOrigin(0.5, 0.5).setDepth(4);
 
-      this.add.zone(tx + TAB_W / 2, TAB_Y + TAB_H / 2, TAB_W, TAB_H)
+      this._tabTextObjs[tab] = txt;
+
+      this.add.zone(cx, cy, TAB_W, TAB_H)
         .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
         .on('pointerdown', () => this._setTab(tab));
-
-      // Store text ref for colour updates
-      if (!this._tabTextMap) this._tabTextMap = {};
-      this._tabTextMap[tab] = { text, tx };
     });
 
-    this._drawTabs();
+    this._drawTabBar();
   }
 
-  _drawTabs() {
-    const gfx = this._tabGfx;
-    gfx.clear();
+  _drawTabBar() {
+    const g = this._tabGfx;
+    g.clear();
 
     TABS.forEach((tab, i) => {
-      const tx = TAB_X_START + i * (TAB_W + 1);
-      const isActive = tab === this._activeTab;
+      const x      = TAB_CX[i] - TAB_W / 2;
+      const active = tab === this._activeTab;
 
-      gfx.fillStyle(isActive ? 0xf7c948 : 0x181838, 1);
-      gfx.fillRect(tx, TAB_Y, TAB_W, TAB_H);
-      gfx.lineStyle(1, isActive ? 0xf7c948 : 0x333366, 1);
-      gfx.strokeRect(tx, TAB_Y, TAB_W, TAB_H);
+      g.fillStyle(active ? 0xf7c948 : 0x141428, 1);
+      g.fillRect(x, TAB_BAR_Y, TAB_W, TAB_H);
+      g.lineStyle(1, active ? 0xf7c948 : 0x222244, 1);
+      g.strokeRect(x, TAB_BAR_Y, TAB_W, TAB_H);
 
-      this._tabTextMap[tab].text.setColor(isActive ? '#08081a' : '#8888bb');
+      this._tabTextObjs[tab].setColor(active ? '#0d0d1a' : '#6666aa');
     });
   }
 
   _setTab(tab) {
-    this._activeTab = tab;
-    this._drawTabs();
+    this._activeTab  = tab;
+    this._currentPage = 0;
+    this._snapPage();
     this._refreshUI();
   }
 
-  // ── Option selector ───────────────────────────────────────────────────────────
+  // ── Option helpers ────────────────────────────────────────────────────────────
 
-  _buildOptionSelector() {
-    const arrowY = 158;
-
-    this._sectionLabel = this.add.text(420, 112, '', {
-      fontFamily: 'Silkscreen', fontSize: '13px',
-      color: '#ccccee', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(2);
-
-    this._counterText = this.add.text(420, arrowY, '', {
-      fontFamily: 'Silkscreen', fontSize: '14px',
-      color: '#ffffff', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(2);
-
-    this._makeArrowButton(228, arrowY, '◀', () => this._stepOption(-1));
-    this._makeArrowButton(612, arrowY, '▶', () => this._stepOption(+1));
-
-    // Separator below tabs
-    const sep = this.add.graphics().setDepth(1);
-    sep.lineStyle(1, 0x1e1e48, 1);
-    sep.lineBetween(200, 96, 640, 96);
-  }
-
-  _makeArrowButton(cx, cy, label, onClick) {
-    const W = 34; const H = 34;
-    const gfx = this.add.graphics().setDepth(3);
-
-    const draw = (hovered) => {
-      gfx.clear();
-      gfx.fillStyle(hovered ? 0x2a2a6a : 0x141432, 1);
-      gfx.fillRect(cx - W / 2, cy - H / 2, W, H);
-      gfx.lineStyle(1, hovered ? 0x8888cc : 0x333366, 1);
-      gfx.strokeRect(cx - W / 2, cy - H / 2, W, H);
-    };
-
-    draw(false);
-
-    this.add.text(cx, cy, label, {
-      fontFamily: 'Silkscreen', fontSize: '13px',
-      color: '#aaaadd', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(4);
-
-    this.add.zone(cx, cy, W, H).setOrigin(0.5, 0.5).setDepth(5).setInteractive()
-      .on('pointerover', () => draw(true))
-      .on('pointerout',  () => draw(false))
-      .on('pointerdown', onClick);
-  }
-
-  // ── Color swatches ────────────────────────────────────────────────────────────
-
-  _buildColorSection() {
-    this._colorLabel = this.add.text(420, 200, 'COLOR', {
-      fontFamily: 'Silkscreen', fontSize: '12px',
-      color: '#7777aa', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(2).setVisible(false);
-  }
-
-  _refreshColorSwatches() {
-    for (const obj of this._swatchObjects) obj.destroy();
-    this._swatchObjects = [];
-
-    const { colorKey, colorCount, colorVal } = this._getColorInfo();
-
-    if (!colorKey || colorCount <= 1) {
-      this._colorLabel.setVisible(false);
-      return;
-    }
-
-    this._colorLabel.setVisible(true);
-
-    const swatchY  = 232;
-    const totalW   = colorCount * (SWATCH_SIZE + SWATCH_GAP) - SWATCH_GAP;
-    const startX   = Math.max(212, 420 - totalW / 2);
-
-    for (let i = 1; i <= colorCount; i++) {
-      const cx     = startX + (i - 1) * (SWATCH_SIZE + SWATCH_GAP) + SWATCH_SIZE / 2;
-      const padded = String(i).padStart(2, '0');
-      const active = padded === colorVal;
-
-      const gfx = this.add.graphics().setDepth(3);
-      gfx.fillStyle(active ? 0xf7c948 : 0x1e1e48, 1);
-      gfx.fillRect(cx - SWATCH_SIZE / 2, swatchY - SWATCH_SIZE / 2, SWATCH_SIZE, SWATCH_SIZE);
-      gfx.lineStyle(1, active ? 0xf7c948 : 0x3a3a6a, 1);
-      gfx.strokeRect(cx - SWATCH_SIZE / 2, swatchY - SWATCH_SIZE / 2, SWATCH_SIZE, SWATCH_SIZE);
-
-      const numText = this.add.text(cx, swatchY, String(i), {
-        fontFamily: 'Silkscreen', fontSize: '10px',
-        color: active ? '#08081a' : '#8888aa',
-        resolution: 2,
-      }).setOrigin(0.5, 0.5).setDepth(4);
-
-      const zone = this.add.zone(cx, swatchY, SWATCH_SIZE, SWATCH_SIZE)
-        .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
-        .on('pointerdown', () => this._setColor(colorKey, padded));
-
-      this._swatchObjects.push(gfx, numText, zone);
+  _getTotalOptions() {
+    const k = this._draft.kids ? 'kids' : 'adult';
+    const m = manifest[k];
+    switch (this._activeTab) {
+      case 'body':   return m.body.count;
+      case 'eyes':   return m.eyes.count;
+      case 'hair':   return m.hair.count + 1; // +1 for bald
+      case 'outfit': return m.outfit.count;
     }
   }
+
+  _getSelectedIdx() {
+    switch (this._activeTab) {
+      case 'body':   return parseInt(this._draft.body,   10) - 1;
+      case 'eyes':   return parseInt(this._draft.eyes,   10) - 1;
+      case 'hair':   return this._draft.hair === '00' ? 0 : parseInt(this._draft.hair, 10);
+      case 'outfit': return parseInt(this._draft.outfit, 10) - 1;
+    }
+  }
+
+  _getDraftVal() {
+    return this._draft[this._activeTab];
+  }
+
+  _getOptionVal(idx) {
+    if (this._activeTab === 'hair') {
+      // index 0 = bald, 1..count = styled
+      return idx === 0 ? '00' : String(idx).padStart(2, '0');
+    }
+    return String(idx + 1).padStart(2, '0');
+  }
+
+  _selectOption(optionVal) {
+    this._draft[this._activeTab] = optionVal;
+
+    // Clamp colors when option changes
+    const k = this._draft.kids ? 'kids' : 'adult';
+    const m = manifest[k];
+
+    if (this._activeTab === 'hair' && optionVal !== '00') {
+      const max = m.hair.exceptions?.[optionVal] ?? m.hair.colors;
+      if (parseInt(this._draft.hair_color, 10) > max) {
+        this._draft.hair_color = String(max).padStart(2, '0');
+      }
+    }
+    if (this._activeTab === 'outfit' && !this._draft.kids) {
+      const max = m.outfit.colors[optionVal] ?? 1;
+      if (parseInt(this._draft.outfit_color, 10) > max) {
+        this._draft.outfit_color = '01';
+      }
+    }
+
+    this._refreshPreview();
+    this._refreshUI();
+  }
+
+  _snapPage() {
+    this._currentPage = Math.floor(this._getSelectedIdx() / ITEMS_PER_PAGE);
+  }
+
+  _refreshUI() {
+    this._drawTabBar();
+    this._refreshColorDots();
+    this._rebuildGrid();
+  }
+
+  // ── Color helpers ─────────────────────────────────────────────────────────────
 
   _getColorInfo() {
     const k = this._draft.kids ? 'kids' : 'adult';
@@ -258,90 +466,9 @@ export default class CharacterScene extends Phaser.Scene {
 
   _setColor(colorKey, padded) {
     this._draft[colorKey] = padded;
-    this._refreshColorSwatches();
+    this._refreshColorDots();
     this._refreshPreview();
-  }
-
-  // ── Option stepping ───────────────────────────────────────────────────────────
-
-  _stepOption(dir) {
-    const k = this._draft.kids ? 'kids' : 'adult';
-    const m = manifest[k];
-
-    const wrap = (cur, max) => ((cur - 1 + dir + max) % max) + 1;
-
-    switch (this._activeTab) {
-      case 'body': {
-        const next = wrap(parseInt(this._draft.body, 10), m.body.count);
-        this._draft.body = String(next).padStart(2, '0');
-        break;
-      }
-      case 'eyes': {
-        const next = wrap(parseInt(this._draft.eyes, 10), m.eyes.count);
-        this._draft.eyes = String(next).padStart(2, '0');
-        break;
-      }
-      case 'hair': {
-        // 0 = bald, 1..count = styled — total options = count + 1
-        const cur   = this._draft.hair === '00' ? 0 : parseInt(this._draft.hair, 10);
-        const total = m.hair.count + 1;
-        const next  = (cur + dir + total) % total;
-        this._draft.hair = next === 0 ? '00' : String(next).padStart(2, '0');
-        // Clamp hair_color to new style's max
-        if (this._draft.hair !== '00') {
-          const newMax = m.hair.exceptions?.[this._draft.hair] ?? m.hair.colors;
-          if (parseInt(this._draft.hair_color, 10) > newMax) {
-            this._draft.hair_color = String(newMax).padStart(2, '0');
-          }
-        }
-        break;
-      }
-      case 'outfit': {
-        const next = wrap(parseInt(this._draft.outfit, 10), m.outfit.count);
-        this._draft.outfit = String(next).padStart(2, '0');
-        if (!this._draft.kids) {
-          const newMax = m.outfit.colors[this._draft.outfit] ?? 1;
-          if (parseInt(this._draft.outfit_color, 10) > newMax) {
-            this._draft.outfit_color = '01';
-          }
-        }
-        break;
-      }
-    }
-
-    this._refreshUI();
-    this._refreshPreview();
-  }
-
-  // ── UI text refresh ───────────────────────────────────────────────────────────
-
-  _refreshUI() {
-    const k = this._draft.kids ? 'kids' : 'adult';
-    const m = manifest[k];
-
-    let label = TAB_LABELS[this._activeTab];
-    let counter = '';
-
-    switch (this._activeTab) {
-      case 'body':
-        counter = `${parseInt(this._draft.body, 10)}  /  ${m.body.count}`;
-        break;
-      case 'eyes':
-        counter = `${parseInt(this._draft.eyes, 10)}  /  ${m.eyes.count}`;
-        break;
-      case 'hair':
-        counter = this._draft.hair === '00'
-          ? `BALD  /  ${m.hair.count + 1}`
-          : `${parseInt(this._draft.hair, 10)}  /  ${m.hair.count + 1}`;
-        break;
-      case 'outfit':
-        counter = `${parseInt(this._draft.outfit, 10)}  /  ${m.outfit.count}`;
-        break;
-    }
-
-    this._sectionLabel.setText(label);
-    this._counterText.setText(counter);
-    this._refreshColorSwatches();
+    this._rebuildGrid();
   }
 
   // ── Avatar preview ────────────────────────────────────────────────────────────
@@ -397,42 +524,6 @@ export default class CharacterScene extends Phaser.Scene {
       this._refreshPreview();
     });
     this.load.start();
-  }
-
-  // ── Done / Cancel buttons ─────────────────────────────────────────────────────
-
-  _buildDoneButton() {
-    const bx = 420; const by = 438;
-    const bw = 180; const bh = 34;
-
-    const gfx = this.add.graphics().setDepth(2);
-    gfx.fillStyle(0x1a4a1a, 1);
-    gfx.fillRect(bx - bw / 2, by - bh / 2, bw, bh);
-    gfx.lineStyle(2, 0x44bb44, 1);
-    gfx.strokeRect(bx - bw / 2, by - bh / 2, bw, bh);
-
-    this.add.text(bx, by, 'DONE', {
-      fontFamily: 'Silkscreen', fontSize: '15px',
-      color: '#88ee88', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(3);
-
-    this.add.zone(bx, by, bw, bh).setOrigin(0.5, 0.5).setDepth(5).setInteractive()
-      .on('pointerdown', () => this._confirm());
-
-    this.add.text(420, 463, 'ESC to cancel', {
-      fontFamily: 'Silkscreen', fontSize: '10px',
-      color: '#444466', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(2);
-  }
-
-  _buildCloseButton() {
-    this.add.text(624, 22, '✕', {
-      fontFamily: 'Silkscreen', fontSize: '14px',
-      color: '#555577', resolution: 2,
-    }).setOrigin(0.5, 0.5).setDepth(4).setInteractive()
-      .on('pointerover', function () { this.setColor('#aaaacc'); })
-      .on('pointerout',  function () { this.setColor('#555577'); })
-      .on('pointerdown', () => this._cancel());
   }
 
   // ── Confirm / Cancel ──────────────────────────────────────────────────────────
