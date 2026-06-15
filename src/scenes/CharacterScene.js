@@ -8,42 +8,14 @@ import {
   defaultAvatarConfig,
 } from '../systems/AvatarCompositor.js';
 
-// ── Layout constants ───────────────────────────────────────────────────────────
-const PREVIEW_X     = 320;
-const PREVIEW_Y     = 238;  // feet position (origin is bottom-center)
-const PREVIEW_SCALE = 3;
-const PREVIEW_FRAME = 74;   // idle-down start
-
-const TABS       = ['body', 'eyes', 'hair', 'outfit'];
-const TAB_LABELS = { body: 'BODY', eyes: 'EYES', hair: 'HAIR', outfit: 'OUTFIT' };
-
+const TABS        = ['body', 'eyes', 'hair', 'outfit'];
+const TAB_LABELS  = { body: 'BODY', eyes: 'EYES', hair: 'HAIR', outfit: 'OUTFIT' };
 const IDLE_FRAMES = { 'idle-down': [74, 75, 76, 77, 78, 79] };
-
+const PREVIEW_FRAME = 74;
 const ITEMS_PER_PAGE = 8;
-const GRID_COLS      = 4;
-const CELL_W         = 130;
-const CELL_H         = 60;
-const CELL_GAP_X     = 10;
-const CELL_GAP_Y     = 10;
-// 4 cols × 130 + 3 × 10 = 550 → left edge = (640-550)/2 = 45
-const GRID_LEFT      = 45;
-const GRID_TOP       = 284;
-// Col x-centers: 45 + 65 = 110, +140 = 250, +140 = 390, +140 = 530
-const COL_CX         = [110, 250, 390, 530];
-// Row y-centers: 284 + 30 = 314, + 60 + 10 + 30 = 414... recalc to fit y=284-414
-// Available height 284–414 = 130px → 2 rows × 60 + 1 gap × 10 = 130 ✓
-const ROW_CY         = [314, 384];
 
-const DOT_Y       = 258;
-const DOT_RADIUS  = 10;
-const DOT_SPACING = 26;
-
-const TAB_BAR_Y = 422;
-const TAB_W     = 160;
-const TAB_H     = 58;
-const TAB_CX    = [80, 240, 400, 560];
-
-const MINI_SCALE = 1.0; // scale for grid cell avatars
+const BODY_TINT_MAP = { '10': 0x6B4C35 };
+const HAIR_TINT_MAP = { '07': 0x3A3A3A };
 
 export default class CharacterScene extends Phaser.Scene {
   constructor() {
@@ -53,18 +25,20 @@ export default class CharacterScene extends Phaser.Scene {
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   init(data) {
-    this._draft          = { ...(data.avatarConfig ?? defaultAvatarConfig()) };
-    this._activeTab      = 'body';
-    this._currentPage    = 0;
-    this._previewSprites = [];
-    this._dotZones       = [];
-    this._dotGfx         = null;
-    this._gridObjects    = [];
-    this._pageNavObjects = [];
-    this._tabGfx         = null;
-    this._tabTextObjs    = {};
-    this._loadPending    = false;
+    this._draft           = { ...(data.avatarConfig ?? defaultAvatarConfig()) };
+    this._activeTab       = 'body';
+    this._currentPage     = 0;
+    this._previewSprites  = [];
+    this._dotZones        = [];
+    this._dotGfx          = null;
+    this._gridObjects     = [];
+    this._pageNavObjects  = [];
+    this._staticObjects   = [];
+    this._tabGfx          = null;
+    this._tabTextObjs     = {};
+    this._loadPending     = false;
     this._gridLoadPending = false;
+    this._layout          = null;
   }
 
   preload() {
@@ -72,55 +46,156 @@ export default class CharacterScene extends Phaser.Scene {
   }
 
   create() {
+    this._layout = this._getLayout();
+    this._buildAll();
+    this.scale.on('resize', this._onResize, this);
+    this.input.keyboard.on('keydown-ESC', () => this._cancel());
+  }
+
+  shutdown() {
+    this.scale.off('resize', this._onResize, this);
+  }
+
+  // ── Responsive layout ─────────────────────────────────────────────────────────
+
+  _getLayout() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+    const HEADER_H = 44;
+    const TAB_H    = 58;
+    const COLS     = 4;
+    const ROWS     = 2;
+    const GAP      = 6;
+    const MARGIN   = 8;
+
+    // Avatar preview: large scale on wide screens, smaller on narrow phones
+    const previewScale = W >= 480 ? 3 : 2;
+    const avatarH      = 64 * previewScale;
+    // Feet at whichever is smaller: 46% of H, or just below the header + avatar
+    const previewY = Math.min(Math.round(H * 0.46), HEADER_H + avatarH + 10);
+    const previewX = Math.round(W / 2);
+
+    // Separators and dots
+    const sep1Y      = previewY + 6;
+    const DOT_R      = 9;
+    const dotsY      = sep1Y + 20;
+    const DOT_SPACING = Math.min(26, Math.max(18, Math.floor((W - 32) / 12)));
+    const sep2Y      = dotsY + DOT_R + 8;
+
+    // Grid zone
+    const tabBarY = H - TAB_H;
+    const navY    = tabBarY - 18;
+    const gridBot = navY - 4;
+    const gridTop = sep2Y + 8;
+
+    // Cell sizing: fill available width with 4 cols
+    const cellW    = Math.max(60, Math.floor((W - 2 * MARGIN - (COLS - 1) * GAP) / COLS));
+    const cellH    = Math.max(46, Math.floor((gridBot - gridTop - GAP) / ROWS));
+    const miniScale = Math.min(1.0, Math.max(0.65, (cellH - 4) / 64));
+
+    const colCX = Array.from({ length: COLS }, (_, i) =>
+      MARGIN + Math.round(cellW / 2) + i * (cellW + GAP));
+    const rowCY = [
+      gridTop + Math.round(cellH / 2),
+      gridTop + cellH + GAP + Math.round(cellH / 2),
+    ];
+
+    // Tab bar: 4 equal sections
+    const tabW  = Math.floor(W / 4);
+    const tabCX = Array.from({ length: 4 }, (_, i) => Math.round(tabW / 2) + i * tabW);
+
+    return {
+      W, H, HEADER_H, TAB_H, COLS, ROWS, GAP, MARGIN,
+      previewX, previewY, previewScale,
+      sep1Y, dotsY, DOT_R, DOT_SPACING, sep2Y,
+      tabBarY, navY, gridTop, gridBot,
+      cellW, cellH, miniScale, colCX, rowCY,
+      tabW, tabCX,
+    };
+  }
+
+  _onResize() {
+    this._layout = this._getLayout();
+    this._destroyAll();
+    this._buildAll();
+  }
+
+  _destroyAll() {
+    for (const o of this._staticObjects) o.destroy();
+    this._staticObjects = [];
+
+    if (this._dotGfx) { this._dotGfx.destroy(); this._dotGfx = null; }
+    for (const z of this._dotZones) z.destroy();
+    this._dotZones = [];
+
+    this._destroyGrid();
+
+    for (const spr of this._previewSprites) {
+      this.tweens.killTweensOf(spr);
+      spr.anims.stop();
+      spr.destroy();
+    }
+    this._previewSprites = [];
+
+    this._tabGfx     = null;
+    this._tabTextObjs = {};
+  }
+
+  _buildAll() {
     this._buildBackground();
     this._buildHeader();
     this._buildDotLayer();
     this._buildTabBar();
-
     this._refreshPreview();
     this._refreshUI();
-
-    this.input.keyboard.on('keydown-ESC', () => this._cancel());
   }
 
   // ── Background ────────────────────────────────────────────────────────────────
 
   _buildBackground() {
-    this.add.rectangle(320, 240, 640, 480, 0x08081a, 0.97).setDepth(0);
+    const { W, H, sep1Y, sep2Y, tabBarY } = this._layout;
+    const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x08081a, 0.97).setDepth(0);
+    this._staticObjects.push(bg);
 
-    // Separator lines
     const g = this.add.graphics().setDepth(1);
     g.lineStyle(1, 0x1e1e48, 1);
-    g.lineBetween(0, 244, 640, 244);  // below avatar
-    g.lineBetween(0, 276, 640, 276);  // below dots
-    g.lineBetween(0, TAB_BAR_Y, 640, TAB_BAR_Y); // above tab bar
+    g.lineBetween(0, sep1Y, W, sep1Y);
+    g.lineBetween(0, sep2Y, W, sep2Y);
+    g.lineBetween(0, tabBarY, W, tabBarY);
+    this._staticObjects.push(g);
   }
 
   // ── Header ────────────────────────────────────────────────────────────────────
 
   _buildHeader() {
-    this.add.rectangle(320, 22, 640, 44, 0x0d0d1a, 1).setDepth(1);
+    const { W, HEADER_H } = this._layout;
+    const headerBg = this.add.rectangle(W / 2, HEADER_H / 2, W, HEADER_H, 0x0d0d1a, 1).setDepth(1);
+    this._staticObjects.push(headerBg);
 
-    const xBtn = this.add.text(24, 22, '✕', {
+    const xBtn = this.add.text(24, HEADER_H / 2, '✕', {
       fontFamily: 'Silkscreen', fontSize: '14px',
       color: '#555577', resolution: 2,
     }).setOrigin(0.5, 0.5).setDepth(4).setInteractive()
       .on('pointerover',  function () { this.setColor('#aaaacc'); })
       .on('pointerout',   function () { this.setColor('#555577'); })
       .on('pointerdown',  () => this._cancel());
+    this._staticObjects.push(xBtn);
 
-    this.add.text(320, 22, 'YOUR LOOK', {
+    const title = this.add.text(W / 2, HEADER_H / 2, 'YOUR LOOK', {
       fontFamily: 'Silkscreen', fontSize: '13px',
       color: '#f7c948', resolution: 2,
     }).setOrigin(0.5, 0.5).setDepth(4);
+    this._staticObjects.push(title);
 
-    this.add.text(616, 22, 'SAVE', {
+    const saveBtn = this.add.text(W - 24, HEADER_H / 2, 'SAVE', {
       fontFamily: 'Silkscreen', fontSize: '13px',
       color: '#88ee88', resolution: 2,
     }).setOrigin(0.5, 0.5).setDepth(4).setInteractive()
       .on('pointerover',  function () { this.setColor('#bbffbb'); })
       .on('pointerout',   function () { this.setColor('#88ee88'); })
       .on('pointerdown',  () => this._confirm());
+    this._staticObjects.push(saveBtn);
   }
 
   // ── Color dot layer ───────────────────────────────────────────────────────────
@@ -131,18 +206,16 @@ export default class CharacterScene extends Phaser.Scene {
   }
 
   _refreshColorDots() {
-    // Destroy old interactive zones
     for (const z of this._dotZones) z.destroy();
     this._dotZones = [];
     this._dotGfx.clear();
 
     const { colorKey, colorCount, colorVal } = this._getColorInfo();
-
-    // Hide dot row when there's no color choice
     if (!colorKey || colorCount <= 1) return;
 
-    const totalW  = (colorCount - 1) * DOT_SPACING;
-    const startX  = 320 - totalW / 2;
+    const { W, dotsY, DOT_R, DOT_SPACING } = this._layout;
+    const totalW = (colorCount - 1) * DOT_SPACING;
+    const startX = W / 2 - totalW / 2;
 
     for (let i = 1; i <= colorCount; i++) {
       const cx     = startX + (i - 1) * DOT_SPACING;
@@ -150,14 +223,13 @@ export default class CharacterScene extends Phaser.Scene {
       const active = padded === colorVal;
 
       this._dotGfx.fillStyle(active ? 0xf7c948 : 0x2a2a52, 1);
-      this._dotGfx.fillCircle(cx, DOT_Y, DOT_RADIUS);
+      this._dotGfx.fillCircle(cx, dotsY, DOT_R);
       this._dotGfx.lineStyle(active ? 2 : 1, active ? 0xffffff : 0x333370, 1);
-      this._dotGfx.strokeCircle(cx, DOT_Y, DOT_RADIUS);
+      this._dotGfx.strokeCircle(cx, dotsY, DOT_R);
 
-      const zone = this.add.zone(cx, DOT_Y, DOT_RADIUS * 2 + 6, DOT_RADIUS * 2 + 6)
+      const zone = this.add.zone(cx, dotsY, DOT_R * 2 + 8, DOT_R * 2 + 8)
         .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
         .on('pointerdown', () => this._setColor(colorKey, padded));
-
       this._dotZones.push(zone);
     }
   }
@@ -173,18 +245,18 @@ export default class CharacterScene extends Phaser.Scene {
 
   _rebuildGrid() {
     this._destroyGrid();
+    const { COLS, colCX, rowCY, cellW, cellH, miniScale } = this._layout;
 
     const total     = this._getTotalOptions();
     const pageStart = this._currentPage * ITEMS_PER_PAGE;
     const pageEnd   = Math.min(pageStart + ITEMS_PER_PAGE, total);
 
-    // Gather textures needed for this page and load any missing ones
+    // Batch-load any missing textures for this page
     const needed = [];
     for (let i = pageStart; i < pageEnd; i++) {
       const optVal = this._getOptionVal(i);
       const draft  = { ...this._draft, [this._activeTab]: optVal };
-      const layers = getAvatarLayers(draft);
-      for (const { key, path } of layers) {
+      for (const { key, path } of getAvatarLayers(draft)) {
         if (!this.textures.exists(key)) needed.push({ key, path });
       }
     }
@@ -201,79 +273,56 @@ export default class CharacterScene extends Phaser.Scene {
       this.load.start();
       return;
     }
-
     if (this._gridLoadPending) return;
 
-    // Draw cells
     for (let i = pageStart; i < pageEnd; i++) {
       const slotIdx = i - pageStart;
-      const col     = slotIdx % GRID_COLS;
-      const row     = Math.floor(slotIdx / GRID_COLS);
-      const cx      = COL_CX[col];
-      const cy      = ROW_CY[row];
-
+      const col     = slotIdx % COLS;
+      const row     = Math.floor(slotIdx / COLS);
+      const cx      = colCX[col];
+      const cy      = rowCY[row];
       const optVal  = this._getOptionVal(i);
       const active  = optVal === this._getDraftVal();
 
-      // Cell background
       const bg = this.add.graphics().setDepth(2);
       bg.fillStyle(active ? 0x1a1a3e : 0x10102a, 1);
-      bg.fillRect(cx - CELL_W / 2, cy - CELL_H / 2, CELL_W, CELL_H);
+      bg.fillRect(cx - cellW / 2, cy - cellH / 2, cellW, cellH);
       bg.lineStyle(active ? 2 : 1, active ? 0xf7c948 : 0x222244, 1);
-      bg.strokeRect(cx - CELL_W / 2, cy - CELL_H / 2, CELL_W, CELL_H);
+      bg.strokeRect(cx - cellW / 2, cy - cellH / 2, cellW, cellH);
       this._gridObjects.push(bg);
 
-      // Mini avatar or bald placeholder
       if (this._activeTab === 'hair' && optVal === '00') {
         const t = this.add.text(cx, cy, 'BALD', {
-          fontFamily: 'Silkscreen', fontSize: '11px',
+          fontFamily: 'Silkscreen', fontSize: '10px',
           color: active ? '#f7c948' : '#666688', resolution: 2,
         }).setOrigin(0.5, 0.5).setDepth(3);
         this._gridObjects.push(t);
       } else {
-        const cellConfig = { ...this._draft, [this._activeTab]: optVal };
-        const layers     = getAvatarLayers(cellConfig);
-        const allLoaded  = layers.every(({ key }) => this.textures.exists(key));
-
-        if (allLoaded) {
-          this._renderCellStack(cx, cy, cellConfig, layers);
+        const cellCfg = { ...this._draft, [this._activeTab]: optVal };
+        const layers  = getAvatarLayers(cellCfg);
+        if (layers.every(({ key }) => this.textures.exists(key))) {
+          this._renderCellStack(cx, cy, cellCfg, layers, cellH, miniScale);
         }
       }
 
-      // Tap zone
-      const zone = this.add.zone(cx, cy, CELL_W, CELL_H)
+      const zone = this.add.zone(cx, cy, cellW, cellH)
         .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
-        .on('pointerdown', () => {
-          this._selectOption(optVal);
-        });
+        .on('pointerdown', () => this._selectOption(optVal));
       this._gridObjects.push(zone);
     }
 
-    // Page navigation
-    if (total > ITEMS_PER_PAGE) {
-      this._buildPageNav(total);
-    }
+    if (total > ITEMS_PER_PAGE) this._buildPageNav(total);
   }
 
-  _renderCellStack(cx, cy, cellConfig, layers) {
-    // Feet pinned at cy + CELL_H/2 - 2, scale=MINI_SCALE
-    const feetY = cy + CELL_H / 2 - 2;
-
+  _renderCellStack(cx, cy, cellConfig, layers, cellH, miniScale) {
+    const feetY = cy + cellH / 2 - 2;
     layers.forEach(({ key }, i) => {
       const spr = this.add.sprite(cx, feetY, key, PREVIEW_FRAME)
-        .setOrigin(0.5, 1)
-        .setScale(MINI_SCALE)
-        .setDepth(3 + i * 0.1);
+        .setOrigin(0.5, 1).setScale(miniScale).setDepth(3 + i * 0.1);
       this._gridObjects.push(spr);
     });
 
-    // Apply tints (same logic as AvatarCompositor)
     const sprs = this._gridObjects.slice(this._gridObjects.length - layers.length);
-    const { body, body: _b, ...rest } = cellConfig;
-
-    const BODY_TINT_MAP = { '10': 0x6B4C35 };
-    const HAIR_TINT_MAP = { '07': 0x3A3A3A };
-
     const bodyTint = BODY_TINT_MAP[cellConfig.body];
     if (bodyTint) {
       sprs[0].setTint(bodyTint);
@@ -286,37 +335,29 @@ export default class CharacterScene extends Phaser.Scene {
   }
 
   _buildPageNav(total) {
+    const { W, navY } = this._layout;
     const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
-    const navY = 413;
 
-    const counter = this.add.text(320, navY, `${this._currentPage + 1} / ${totalPages}`, {
+    const counter = this.add.text(W / 2, navY, `${this._currentPage + 1} / ${totalPages}`, {
       fontFamily: 'Silkscreen', fontSize: '11px',
       color: '#8888aa', resolution: 2,
     }).setOrigin(0.5, 0.5).setDepth(3);
     this._pageNavObjects.push(counter);
 
-    if (this._currentPage > 0) {
-      this._makeMiniBtn(280, navY, '◀', () => {
-        this._currentPage--;
-        this._rebuildGrid();
-      });
-    }
+    if (this._currentPage > 0)
+      this._makeMiniBtn(W / 2 - 44, navY, '◀', () => { this._currentPage--; this._rebuildGrid(); });
 
-    if (this._currentPage < totalPages - 1) {
-      this._makeMiniBtn(360, navY, '▶', () => {
-        this._currentPage++;
-        this._rebuildGrid();
-      });
-    }
+    if (this._currentPage < totalPages - 1)
+      this._makeMiniBtn(W / 2 + 44, navY, '▶', () => { this._currentPage++; this._rebuildGrid(); });
   }
 
   _makeMiniBtn(cx, cy, label, onClick) {
-    const W = 28; const H = 22;
+    const BW = 28; const BH = 22;
     const gfx = this.add.graphics().setDepth(3);
     gfx.fillStyle(0x1a1a3e, 1);
-    gfx.fillRect(cx - W / 2, cy - H / 2, W, H);
+    gfx.fillRect(cx - BW / 2, cy - BH / 2, BW, BH);
     gfx.lineStyle(1, 0x333366, 1);
-    gfx.strokeRect(cx - W / 2, cy - H / 2, W, H);
+    gfx.strokeRect(cx - BW / 2, cy - BH / 2, BW, BH);
     this._pageNavObjects.push(gfx);
 
     const txt = this.add.text(cx, cy, label, {
@@ -325,7 +366,7 @@ export default class CharacterScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5).setDepth(4);
     this._pageNavObjects.push(txt);
 
-    const zone = this.add.zone(cx, cy, W + 8, H + 8)
+    const zone = this.add.zone(cx, cy, BW + 8, BH + 8)
       .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
       .on('pointerdown', onClick);
     this._pageNavObjects.push(zone);
@@ -335,45 +376,48 @@ export default class CharacterScene extends Phaser.Scene {
 
   _buildTabBar() {
     this._tabGfx = this.add.graphics().setDepth(2);
+    this._staticObjects.push(this._tabGfx);
+
+    const { tabCX, tabW, tabBarY, TAB_H } = this._layout;
 
     TABS.forEach((tab, i) => {
-      const cx = TAB_CX[i];
-      const cy = TAB_BAR_Y + TAB_H / 2;
+      const cx = tabCX[i];
+      const cy = tabBarY + TAB_H / 2;
 
       const txt = this.add.text(cx, cy, TAB_LABELS[tab], {
         fontFamily: 'Silkscreen', fontSize: '12px',
         color: '#6666aa', resolution: 2,
       }).setOrigin(0.5, 0.5).setDepth(4);
-
+      this._staticObjects.push(txt);
       this._tabTextObjs[tab] = txt;
 
-      this.add.zone(cx, cy, TAB_W, TAB_H)
+      const zone = this.add.zone(cx, cy, tabW, TAB_H)
         .setOrigin(0.5, 0.5).setDepth(5).setInteractive()
         .on('pointerdown', () => this._setTab(tab));
+      this._staticObjects.push(zone);
     });
 
     this._drawTabBar();
   }
 
   _drawTabBar() {
+    const { W, tabCX, tabW, tabBarY, TAB_H } = this._layout;
     const g = this._tabGfx;
     g.clear();
 
     TABS.forEach((tab, i) => {
-      const x      = TAB_CX[i] - TAB_W / 2;
+      const x      = tabCX[i] - tabW / 2;
       const active = tab === this._activeTab;
-
       g.fillStyle(active ? 0xf7c948 : 0x141428, 1);
-      g.fillRect(x, TAB_BAR_Y, TAB_W, TAB_H);
+      g.fillRect(x, tabBarY, tabW, TAB_H);
       g.lineStyle(1, active ? 0xf7c948 : 0x222244, 1);
-      g.strokeRect(x, TAB_BAR_Y, TAB_W, TAB_H);
-
+      g.strokeRect(x, tabBarY, tabW, TAB_H);
       this._tabTextObjs[tab].setColor(active ? '#0d0d1a' : '#6666aa');
     });
   }
 
   _setTab(tab) {
-    this._activeTab  = tab;
+    this._activeTab   = tab;
     this._currentPage = 0;
     this._snapPage();
     this._refreshUI();
@@ -387,7 +431,7 @@ export default class CharacterScene extends Phaser.Scene {
     switch (this._activeTab) {
       case 'body':   return m.body.count;
       case 'eyes':   return m.eyes.count;
-      case 'hair':   return m.hair.count + 1; // +1 for bald
+      case 'hair':   return m.hair.count + 1;
       case 'outfit': return m.outfit.count;
     }
   }
@@ -401,36 +445,28 @@ export default class CharacterScene extends Phaser.Scene {
     }
   }
 
-  _getDraftVal() {
-    return this._draft[this._activeTab];
-  }
+  _getDraftVal() { return this._draft[this._activeTab]; }
 
   _getOptionVal(idx) {
-    if (this._activeTab === 'hair') {
-      // index 0 = bald, 1..count = styled
-      return idx === 0 ? '00' : String(idx).padStart(2, '0');
-    }
+    if (this._activeTab === 'hair') return idx === 0 ? '00' : String(idx).padStart(2, '0');
     return String(idx + 1).padStart(2, '0');
   }
 
   _selectOption(optionVal) {
     this._draft[this._activeTab] = optionVal;
 
-    // Clamp colors when option changes
     const k = this._draft.kids ? 'kids' : 'adult';
     const m = manifest[k];
 
     if (this._activeTab === 'hair' && optionVal !== '00') {
       const max = m.hair.exceptions?.[optionVal] ?? m.hair.colors;
-      if (parseInt(this._draft.hair_color, 10) > max) {
+      if (parseInt(this._draft.hair_color, 10) > max)
         this._draft.hair_color = String(max).padStart(2, '0');
-      }
     }
     if (this._activeTab === 'outfit' && !this._draft.kids) {
       const max = m.outfit.colors[optionVal] ?? 1;
-      if (parseInt(this._draft.outfit_color, 10) > max) {
+      if (parseInt(this._draft.outfit_color, 10) > max)
         this._draft.outfit_color = '01';
-      }
     }
 
     this._refreshPreview();
@@ -452,7 +488,6 @@ export default class CharacterScene extends Phaser.Scene {
   _getColorInfo() {
     const k = this._draft.kids ? 'kids' : 'adult';
     const m = manifest[k];
-
     if (this._activeTab === 'hair' && this._draft.hair !== '00') {
       const max = m.hair.exceptions?.[this._draft.hair] ?? m.hair.colors;
       return { colorKey: 'hair_color', colorCount: max, colorVal: this._draft.hair_color };
@@ -483,14 +518,11 @@ export default class CharacterScene extends Phaser.Scene {
 
     const layerDefs = getAvatarLayers(this._draft);
     const missing   = layerDefs.filter(({ key }) => !this.textures.exists(key));
+    if (missing.length > 0) { this._loadAndRefresh(layerDefs); return; }
 
-    if (missing.length > 0) {
-      this._loadAndRefresh(layerDefs);
-      return;
-    }
-
+    const { previewX, previewY, previewScale } = this._layout;
     this._previewSprites = buildAvatarDisplay(
-      this, this._draft, PREVIEW_X, PREVIEW_Y, PREVIEW_FRAME, PREVIEW_SCALE, 10
+      this, this._draft, previewX, previewY, PREVIEW_FRAME, previewScale, 10
     );
 
     const layerKeys = layerDefs.map(l => l.key);
@@ -501,28 +533,21 @@ export default class CharacterScene extends Phaser.Scene {
           this.anims.create({
             key: fullKey,
             frames: frames.map(f => ({ key: texKey, frame: f })),
-            frameRate: 4,
-            repeat: -1,
+            frameRate: 4, repeat: -1,
           });
         }
       }
     }
-
     this._previewSprites.forEach((spr, i) => spr.play(`idle-down__${layerKeys[i]}`));
   }
 
   _loadAndRefresh(layerDefs) {
     if (this._loadPending) return;
     this._loadPending = true;
-
-    const toLoad = layerDefs.filter(({ key }) => !this.textures.exists(key));
-    for (const { key, path } of toLoad) {
+    for (const { key, path } of layerDefs.filter(({ key }) => !this.textures.exists(key))) {
       this.load.spritesheet(key, path, { frameWidth: 32, frameHeight: 64 });
     }
-    this.load.once('complete', () => {
-      this._loadPending = false;
-      this._refreshPreview();
-    });
+    this.load.once('complete', () => { this._loadPending = false; this._refreshPreview(); });
     this.load.start();
   }
 
