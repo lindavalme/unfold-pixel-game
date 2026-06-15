@@ -161,7 +161,9 @@ export function buildAvatarDisplay(scene, config, x, y, startFrame, scale = 2, b
 export function syncAvatarLayers(avatar) {
   const { sprite, layers } = avatar;
   for (let i = 1; i < layers.length; i++) {
-    layers[i].setPosition(sprite.x, sprite.y);
+    // body.reset() moves both the physics body AND the sprite so Phaser's
+    // arcade postUpdate pass doesn't clobber the position we just set.
+    layers[i].body.reset(sprite.x, sprite.y);
     layers[i].setFlipX(sprite.flipX);
   }
 }
