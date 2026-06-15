@@ -17,6 +17,16 @@
     "dialog": "Hello, dear! I've been waiting for you."
   },
   {
+    "id": "object_wardrobe",
+    "name": "Wardrobe",
+    "type": "object",
+    "x": 368,
+    "y": 128,
+    "action": "open",
+    "dialog": "Change your look?",
+    "scene": "CharacterScene"
+  },
+  {
     "id": "object_memorybox",
     "name": "Memory Box",
     "type": "object",
@@ -26,7 +36,7 @@
     "dialog": "A box filled with memories...",
     "minigame": {
       "type": "battle",
-      "opponent_name": "Maya",
+      "opponent_name": "Alina",
       "opponent_sprite": null,
       "moves": [
         { "name": "Hunger Cry",        "flavor": "It's 3am. You can't think straight!" },
@@ -34,12 +44,12 @@
         { "name": "Cuteness Overload", "flavor": "It's super effective!" }
       ],
       "outcome_message": "You blacked out... overwhelmed with love and sleep deprivation.",
-      "partner": "Chamine",
-      "distraction": "Pinkfong",
+      "partner": "Linda",
+      "distraction": "Danny Go",
       "player_moves": [
         { "name": "Tag in {partner}",      "flavor": "{partner} stumbles in half asleep... barely helped.", "damage": [0.20, 0.24] },
-        { "name": "Turn on {distraction}", "flavor": "{distraction} deployed! It's super effective!",      "damage": [0.28, 0.32] },
-        { "name": "Cry",                   "flavor": "You cried. It felt right. Nothing changed.",          "damage": [0, 0] }
+        { "name": "Turn on {distraction}", "flavor": "{distraction} deployed! Alina paused for 3 seconds.",  "damage": [0.28, 0.32] },
+        { "name": "Cry",                   "flavor": "You cried. It felt right. Nothing changed.",           "damage": [0, 0] }
       ]
     }
   }

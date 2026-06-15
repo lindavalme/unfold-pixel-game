@@ -3,6 +3,7 @@ import BootScene from './scenes/BootScene.js';
 import IntroScene from './scenes/IntroScene.js';
 import WorldScene from './scenes/WorldScene.js';
 import BattleScene from './scenes/BattleScene.js';
+import CharacterScene from './scenes/CharacterScene.js';
 
 new Phaser.Game({
   width: 640,
@@ -20,5 +21,5 @@ new Phaser.Game({
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
   },
-  scene: [BootScene, IntroScene, WorldScene, BattleScene],
+  scene: [BootScene, IntroScene, WorldScene, BattleScene, CharacterScene],
 });
