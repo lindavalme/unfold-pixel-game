@@ -27,6 +27,17 @@ const TILESETS_WITH_PROPS = new Set([
   'Room_Builder_32x32',
 ]);
 
+const FRAME_RANGES = {
+  'idle-right': [56, 57, 58, 59, 60, 61],
+  'idle-up':    [62, 63, 64, 65, 66, 67],
+  'idle-left':  [68, 69, 70, 71, 72, 73],
+  'idle-down':  [74, 75, 76, 77, 78, 79],
+  'walk-right': [112, 113, 114, 115, 116, 117],
+  'walk-up':    [118, 119, 120, 121, 122, 123],
+  'walk-left':  [124, 125, 126, 127, 128, 129],
+  'walk-down':  [130, 131, 132, 133, 134, 135],
+};
+
 const VISUAL_LAYERS = [
   { name: 'Floor',       depth: 0 },
   { name: 'Floor_Decor', depth: 1 },
@@ -58,7 +69,10 @@ export default class WorldScene extends Phaser.Scene {
     });
 
     if (USE_COMPOSED_AVATAR) {
-      const avatarConfig = validateAvatarConfig(defaultAvatarConfig());
+      const saved = localStorage.getItem('unfold_avatar_config');
+      const avatarConfig = saved
+        ? validateAvatarConfig(JSON.parse(saved))
+        : validateAvatarConfig(defaultAvatarConfig());
       preloadAvatar(this, avatarConfig);
       this._avatarConfig = avatarConfig;
     }
@@ -142,17 +156,6 @@ export default class WorldScene extends Phaser.Scene {
     // Frame = rowStart + dirIndex*6 + frameWithinCycle (0–5)
 
     const compositeKey = USE_COMPOSED_AVATAR ? null : 'player';
-
-    const FRAME_RANGES = {
-      'idle-right': [56, 57, 58, 59, 60, 61],
-      'idle-up':    [62, 63, 64, 65, 66, 67],
-      'idle-left':  [68, 69, 70, 71, 72, 73],
-      'idle-down':  [74, 75, 76, 77, 78, 79],
-      'walk-right': [112, 113, 114, 115, 116, 117],
-      'walk-up':    [118, 119, 120, 121, 122, 123],
-      'walk-left':  [124, 125, 126, 127, 128, 129],
-      'walk-down':  [130, 131, 132, 133, 134, 135],
-    };
 
     const IDLE_DOWN_START = 74;
 
@@ -242,6 +245,8 @@ export default class WorldScene extends Phaser.Scene {
       map.widthInPixels, map.heightInPixels - 32
     );
 
+    this._collisionLayer = collisionLayer ?? null;
+
     if (collisionLayer) {
       this.physics.add.collider(this.player, collisionLayer);
     }
@@ -250,6 +255,8 @@ export default class WorldScene extends Phaser.Scene {
     this.cameras.main
       .setBounds(0, 0, map.widthInPixels, map.heightInPixels)
       .startFollow(this.player, true, 1, 1);
+
+    this.events.on('avatarUpdated', (newConfig) => this._rebuildAvatar(newConfig));
 
     // Interaction system
     this.interactionSystem = new InteractionSystem(this);
@@ -262,6 +269,12 @@ export default class WorldScene extends Phaser.Scene {
     this.events.on('proximityLeave', ()       => this.dialogBox.hide());
     this.events.on('dialogClosed',   (entity) => this.toast.show(`system: dialog closed [${entity.name}]`));
     this.events.on('interact', (entity) => {
+      if (entity.scene === 'CharacterScene') {
+        this.dialogBox.hide(false);
+        this.scene.launch('CharacterScene', { avatarConfig: this._avatarConfig });
+        this.scene.pause();
+        return;
+      }
       if (entity.minigame?.type === 'battle') {
         this.dialogBox.hide(false);
         this.scene.launch('BattleScene', {
@@ -295,6 +308,44 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     new OnboardingOverlay(this);
+  }
+
+  _rebuildAvatar(newConfig) {
+    const x = this.player.x;
+    const y = this.player.y;
+
+    for (const spr of this._avatar.layers) {
+      this.tweens.killTweensOf(spr);
+      spr.anims.stop();
+      spr.destroy();
+    }
+
+    this._avatarConfig = newConfig;
+    this._avatar = composeAvatar(this, newConfig, x, y, 74);
+    this.player = this._avatar.sprite;
+    const layerKeys = getAvatarLayers(newConfig).map(l => l.key);
+    this._avatarLayerKeys = layerKeys;
+
+    for (const texKey of layerKeys) {
+      for (const [animKey, frames] of Object.entries(FRAME_RANGES)) {
+        const fullKey = `${animKey}__${texKey}`;
+        if (!this.anims.exists(fullKey)) {
+          this.anims.create({
+            key: fullKey,
+            frames: frames.map(f => ({ key: texKey, frame: f })),
+            frameRate: animKey.startsWith('walk') ? 8 : 4,
+            repeat: -1,
+          });
+        }
+      }
+    }
+
+    this._avatar.layers.forEach((spr, i) => spr.play(`idle-down__${layerKeys[i]}`));
+
+    if (this._collisionLayer) {
+      this.physics.add.collider(this.player, this._collisionLayer);
+    }
+    this.cameras.main.startFollow(this.player, true, 1, 1);
   }
 
   _triggerInteract() {
