@@ -17,6 +17,16 @@
     "dialog": "Hello, dear! I've been waiting for you."
   },
   {
+    "id": "object_wardrobe",
+    "name": "Wardrobe",
+    "type": "object",
+    "x": 368,
+    "y": 128,
+    "action": "open",
+    "dialog": "Change your look?",
+    "scene": "CharacterScene"
+  },
+  {
     "id": "object_memorybox",
     "name": "Memory Box",
     "type": "object",

@@ -551,6 +551,7 @@ Full-screen canvas on all platforms — no fixed UI chrome.
 | **M8 — Share Link** | ⬜ | Publish → URL hash → Recipient opens and plays |
 | **M9 — Printable** | ⬜ | PDF card with QR code + pixel art from Builder |
 | **M10 — Polish** | ⬜ | Closing scene, ambient sound, loading screen, fonts, mobile QA |
+| **M-Avatar — Character Customization** | ⬜ | Recipients visit a wardrobe entity to personalize their avatar; CharacterScene overlay with live animated preview, Body/Eyes/Hair/Outfit category tabs, left/right cycling, color swatches, localStorage persistence |
 
 ---
 
